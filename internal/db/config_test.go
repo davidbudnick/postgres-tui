@@ -87,7 +87,7 @@ func TestConfig_ListConnectionsSortsByID(t *testing.T) {
 	}
 }
 
-func TestConfig_Persistence_PasswordStripping(t *testing.T) {
+func TestConfig_Persistence_PasswordPersisted(t *testing.T) {
 	cfg := newTestConfig(t)
 	_, err := cfg.AddConnection(types.Connection{
 		Name: "local", Host: "localhost", Port: 5432, Username: "u", Password: "supersecret",
@@ -103,8 +103,8 @@ func TestConfig_Persistence_PasswordStripping(t *testing.T) {
 	if len(list) != 1 {
 		t.Fatalf("len=%d", len(list))
 	}
-	if list[0].Password != "" {
-		t.Fatal("password must be stripped on disk")
+	if list[0].Password != "supersecret" {
+		t.Fatalf("password not persisted: %q", list[0].Password)
 	}
 	if list[0].Name != "local" || list[0].Host != "localhost" {
 		t.Fatalf("fields lost: %+v", list[0])
