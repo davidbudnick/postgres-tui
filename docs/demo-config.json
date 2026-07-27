@@ -1,0 +1,29 @@
+{
+  "connections": [
+    {
+      "id": 1,
+      "name": "Local Demo",
+      "host": "localhost",
+      "port": 5432,
+      "username": "postgres",
+      "database": "demo",
+      "ssl_mode": "disable",
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Analytics (RO)",
+      "host": "localhost",
+      "port": 5432,
+      "username": "postgres",
+      "database": "postgres",
+      "ssl_mode": "disable",
+      "read_only": true,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "max_recent_objects": 20,
+  "page_size": 100
+}
