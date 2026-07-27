@@ -509,7 +509,7 @@ func TestCoverageRenderActivityERDServer(t *testing.T) {
 	_ = m.viewERDContent(80, 20)
 	m.Loading = false
 	_ = m.viewERDContent(80, 20)
-	_ = renderERDList(types.ERDGraph{Tables: []types.ERDTable{{Name: "t"}}}, 80)
+	_ = renderERDList(types.ERDGraph{Tables: []types.ERDTable{{Name: "t"}}}, 80, true)
 	big := types.ERDGraph{Schema: "s"}
 	for i := 0; i < erdMaxTables+5; i++ {
 		big.Tables = append(big.Tables, types.ERDTable{Name: fmt.Sprintf("t%d", i), Columns: []string{"id"}})
@@ -550,7 +550,7 @@ func TestCoverageRenderActivityERDServer(t *testing.T) {
 	_ = renderERDDiagram(g, 100)
 	_ = erdFindTable(g, "missing")
 	_ = erdFindTable(g, "a")
-	_ = orderERDColumns("a", []string{"x", "id", "z"}, map[string]bool{"a.z": true})
+	_ = orderERDColumns("a", []string{"x", "id", "z"}, map[string]bool{"a.z": true}, false)
 	_ = maxLayerWidth([][]string{{"a", "bb"}, {"ccc"}})
 	_ = maxLayerWidth(nil)
 

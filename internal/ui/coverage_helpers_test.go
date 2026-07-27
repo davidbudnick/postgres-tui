@@ -265,17 +265,74 @@ func TestERDHelpersCoverage(t *testing.T) {
 			{FromTable: "c", FromCols: []string{"id"}, ToTable: "b", ToCols: []string{"id"}},
 		},
 	}
-	_ = renderERDList(g, 80)
-	_ = renderERDList(types.ERDGraph{}, 40)
+	_ = renderERDList(g, 80, true)
+	_ = renderERDList(types.ERDGraph{}, 40, true)
+	_ = renderERDList(g, 80, false)
 	_ = renderERDDiagram(g, 120)
 	_ = renderERDDiagram(g, 20)
 	_ = renderERDDiagram(types.ERDGraph{Tables: []types.ERDTable{{Name: "solo", Columns: []string{"id"}}}}, 80)
+	// Isolates + multi-child edges for wrap/bus/partition paths
+	wide := types.ERDGraph{
+		Tables: []types.ERDTable{
+			{Name: "hub", Columns: []string{"id"}},
+			{Name: "c1", Columns: []string{"id", "hub_id", "name"}},
+			{Name: "c2", Columns: []string{"id", "hub_id"}},
+			{Name: "c3", Columns: []string{"id", "hub_id"}},
+			{Name: "c4", Columns: []string{"id", "hub_id"}},
+			{Name: "c5", Columns: []string{"id", "hub_id"}},
+			{Name: "orphan", Columns: []string{"id", "note"}},
+			{Name: "lonely", Columns: []string{"x"}},
+		},
+		Edges: []types.FKEdge{
+			{FromTable: "c1", FromCols: []string{"hub_id"}, ToTable: "hub", ToCols: []string{"id"}},
+			{FromTable: "c2", FromCols: []string{"hub_id"}, ToTable: "hub", ToCols: []string{"id"}},
+			{FromTable: "c3", FromCols: []string{"hub_id"}, ToTable: "hub", ToCols: []string{"id"}},
+			{FromTable: "c4", FromCols: []string{"hub_id"}, ToTable: "hub", ToCols: []string{"id"}},
+			{FromTable: "c5", FromCols: []string{"hub_id"}, ToTable: "hub", ToCols: []string{"id"}},
+		},
+	}
+	_ = renderERDDiagram(wide, 100)
+	linked, isolates := erdPartition(wide)
+	if len(isolates) < 2 || len(linked.Tables) < 2 {
+		t.Fatalf("partition linked=%d isolates=%d", len(linked.Tables), len(isolates))
+	}
+	_ = renderERDIsolates(isolates, 40)
+	_ = renderERDIsolates(nil, 40)
+	// Force chip wrap across many short names
+	manyIso := make([]types.ERDTable, 0, 12)
+	for _, n := range []string{"aa", "bb", "cc", "dd", "ee", "ff", "gg", "hh", "ii", "jj", "kk", "ll"} {
+		manyIso = append(manyIso, types.ERDTable{Name: n})
+	}
+	_ = renderERDIsolates(manyIso, 28)
+	// Only isolates (no FKs) → diagram shows unconnected section
+	_ = renderERDDiagram(types.ERDGraph{
+		Tables: []types.ERDTable{{Name: "x", Columns: []string{"id"}}, {Name: "y", Columns: []string{"n"}}},
+	}, 80)
+	// Linked tables but empty edges after self-FK filter
+	_ = renderERDDiagram(types.ERDGraph{
+		Tables: []types.ERDTable{{Name: "t", Columns: []string{"id", "t_id", "a", "b", "c", "d", "e"}}},
+		Edges:  []types.FKEdge{{FromTable: "t", FromCols: []string{"t_id"}, ToTable: "t", ToCols: []string{"id"}}},
+	}, 80)
+	// Reverse-layer edge skipped (child.layer <= parent.layer)
+	_ = layoutERDCanvas(types.ERDGraph{
+		Tables: []types.ERDTable{{Name: "p", Columns: []string{"id"}}, {Name: "c", Columns: []string{"id", "p_id"}}},
+		Edges: []types.FKEdge{
+			{FromTable: "c", FromCols: []string{"p_id"}, ToTable: "p", ToCols: []string{"id"}},
+			{FromTable: "p", FromCols: []string{"id"}, ToTable: "c", ToCols: []string{"id"}}, // reverse
+			{FromTable: "missing_from", FromCols: []string{"x"}, ToTable: "p", ToCols: []string{"id"}},
+		},
+	}, [][]string{{"p"}, {"c"}}, map[string]bool{"c.p_id": true, "p.id": true}, 80)
+	_ = erdWrapLayers([][]string{{"a", "b", "c", "d", "e", "f"}}, 4)
+	_ = erdWrapLayers([][]string{{"a", "b"}}, 4)
+	_ = erdWrapLayers(nil, 0)
 	_ = erdFKColumnSet(g)
 	_ = erdFindTable(g, "a")
 	_ = erdFindTable(g, "missing")
 	fk := erdFKColumnSet(g)
-	_ = orderERDColumns("b", []string{"id", "a_id", "z"}, fk)
-	_ = orderERDColumns("x", nil, fk)
+	_ = orderERDColumns("b", []string{"id", "a_id", "z"}, fk, true)
+	_ = orderERDColumns("b", []string{"id", "a_id", "z"}, fk, false)
+	_ = orderERDColumns("x", nil, fk, true)
+	_ = orderERDColumns("x", []string{"note"}, fk, true)
 	layers := erdLayers(g)
 	_ = maxLayerWidth(layers)
 	_ = maxLayerWidth(nil)
@@ -310,18 +367,47 @@ func TestERDHelpersCoverage(t *testing.T) {
 	n2 := erdNode{name: "b", x: 20, y: 2, w: 12, h: 5, table: types.ERDTable{Name: "b", Columns: []string{"id", "a_id"}}}
 	c.drawBox(n1, map[string]bool{"a.id": true})
 	c.drawBox(n2, map[string]bool{"b.a_id": true})
-	c.routeEdge(n1, n2, "fk")
+	c.routeEdge(n1, n2, "fk", 0)
 	n3 := erdNode{name: "c", x: 2, y: 12, w: 12, h: 4, table: types.ERDTable{Name: "c", Columns: []string{"id"}}}
-	c.routeEdge(n2, n3, "")
+	c.routeEdge(n2, n3, "", 1)
 	n4 := erdNode{name: "d", x: 20, y: 12, w: 12, h: 4, table: types.ERDTable{Name: "d", Columns: []string{"id"}}}
-	c.routeEdge(n3, n4, "x")
+	c.routeEdge(n3, n4, "x", -1)
+	// Label placement edges
+	c.routeEdge(erdNode{x: 0, y: 0, w: 4, h: 2}, erdNode{x: 30, y: 8, w: 4, h: 2}, "verylongfkcolumnname", 0)
+	c.routeEdge(erdNode{x: 0, y: 0, w: 2, h: 1}, erdNode{x: 0, y: 3, w: 2, h: 1}, "ab", 0)
+	// busOffset that clamps midY, early exit when cy too close, empty label
+	c.routeEdge(erdNode{x: 1, y: 1, w: 4, h: 2}, erdNode{x: 1, y: 4, w: 4, h: 2}, "q", 5)
+	c.routeEdge(erdNode{x: 1, y: 1, w: 4, h: 2}, erdNode{x: 1, y: 3, w: 4, h: 2}, "q", 0) // cy <= py+1
+	c.routeEdge(erdNode{x: 0, y: 0, w: 4, h: 1}, erdNode{x: 0, y: 4, w: 4, h: 1}, "", 0)
+	// labX overflow clamp (child near right edge)
+	c.routeEdge(erdNode{x: 0, y: 0, w: 4, h: 2}, erdNode{x: 36, y: 8, w: 4, h: 2}, "abcdefghijklmno", 0)
+	// labY >= cy-1 path: very tight gap, then midY-1
+	c.routeEdge(erdNode{x: 5, y: 0, w: 4, h: 2}, erdNode{x: 5, y: 4, w: 4, h: 2}, "t", 0)
+	// midY <= py early return after busOffset pushes past child
+	c.routeEdge(erdNode{x: 8, y: 2, w: 4, h: 1}, erdNode{x: 8, y: 5, w: 4, h: 1}, "z", -3)
+	// labX < 0 clamp
+	c.routeEdge(erdNode{x: 0, y: 0, w: 2, h: 1}, erdNode{x: 0, y: 6, w: 2, h: 1}, "ww", 0)
 	_ = c.lines()
 
 	c2 := newERDCanvas(0, 0)
 	_ = c2
 	c3 := newERDCanvas(5, 5)
 	c3.drawBox(erdNode{name: "t", x: 0, y: 0, w: 10, h: 10, table: types.ERDTable{Name: "t", Columns: []string{"a", "b", "c", "d", "e"}}}, nil)
+	// many columns → ellipsis; FK accent; id plain
+	c3.drawBox(erdNode{
+		name: "wide", x: 0, y: 0, w: 14, h: 12,
+		table: types.ERDTable{Name: "wide", Columns: []string{"id", "a_id", "b_id", "c_id", "d_id", "note"}},
+	}, map[string]bool{"wide.a_id": true, "wide.b_id": true})
 	_ = c3.lines()
+	// empty graph layout + missing table name → nCol==0 path
+	_ = layoutERDCanvas(types.ERDGraph{}, nil, nil, 40)
+	_ = layoutERDCanvas(types.ERDGraph{}, [][]string{{"ghost"}}, nil, 40)
+	// nCol > erdMaxCols in layout (many FK cols)
+	_ = layoutERDCanvas(types.ERDGraph{
+		Tables: []types.ERDTable{{Name: "fat", Columns: []string{"id", "a_id", "b_id", "c_id", "d_id", "e_id"}}},
+	}, [][]string{{"fat"}}, map[string]bool{
+		"fat.a_id": true, "fat.b_id": true, "fat.c_id": true, "fat.d_id": true, "fat.e_id": true,
+	}, 40)
 }
 
 func TestModelHelpersRemainingBranches(t *testing.T) {

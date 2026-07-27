@@ -514,47 +514,43 @@ func TestCoverageViewEdgeCases(t *testing.T) {
 	c2 := newERDCanvas(20, 14)
 	c2.drawBox(parent, nil)
 	c2.drawBox(childStraight, nil)
-	c2.routeEdge(parent, childStraight, "fk")
+	c2.routeEdge(parent, childStraight, "fk", 0)
 	// early exit: child too close
-	c2.routeEdge(parent, erdNode{x: 4, y: 3, w: 4, h: 2}, "early")
+	c2.routeEdge(parent, erdNode{x: 4, y: 3, w: 4, h: 2}, "early", 0)
 	// rightward child + label
 	childR := erdNode{x: 12, y: 9, w: 6, h: 3, name: "r"}
-	c2.routeEdge(parent, childR, "user_id")
+	c2.routeEdge(parent, childR, "user_id", 0)
 	// leftward child
 	childL := erdNode{x: 0, y: 9, w: 6, h: 3, name: "l"}
-	c2.routeEdge(parent, childL, "x")
+	c2.routeEdge(parent, childL, "x", 0)
 	// empty label
-	c2.routeEdge(parent, childStraight, "")
+	c2.routeEdge(parent, childStraight, "", 0)
 	// label overflow near right edge + tight vertical gap (labY side path, cx > px)
 	c3 := newERDCanvas(16, 12)
 	pTight := erdNode{x: 10, y: 0, w: 6, h: 3, name: "pt"}
 	chTight := erdNode{x: 12, y: 6, w: 4, h: 3, name: "ct"}
-	c3.routeEdge(pTight, chTight, "long_label_name")
+	c3.routeEdge(pTight, chTight, "long_label_name", 0)
 	// label with negative-ish labX (negative node x)
 	c3.routeEdge(
 		erdNode{x: -4, y: 0, w: 4, h: 2},
 		erdNode{x: -2, y: 6, w: 4, h: 2},
-		"ab",
-	)
+		"ab", 0)
 	// cy = py+2, cx > px → labY side path (352-354) + midY clamps
 	// parent h=2,y=0 → py=2; child y=4 → cy=py+2
 	c3.routeEdge(
 		erdNode{x: 0, y: 0, w: 6, h: 2, name: "a"},
 		erdNode{x: 8, y: 4, w: 6, h: 2, name: "b"},
-		"id",
-	)
+		"id", 0)
 	// cx < px labY side path with same tight gap
 	c3.routeEdge(
 		erdNode{x: 8, y: 0, w: 6, h: 2},
 		erdNode{x: 0, y: 4, w: 6, h: 2},
-		"id",
-	)
+		"id", 0)
 	// Force midY edge clamps with extreme coords (py high, cy just past)
 	c3.routeEdge(
 		erdNode{x: 2, y: 1, w: 4, h: 1}, // py=2
 		erdNode{x: 2, y: 4, w: 4, h: 2}, // cy=4=py+2, same center x
-		"z",
-	)
+		"z", 0)
 
 	// renderERDDiagram: empty, isolated, empty cols, missing edge ends, reverse layer edge
 	_ = renderERDDiagram(types.ERDGraph{}, 80)
@@ -608,8 +604,8 @@ func TestCoverageViewEdgeCases(t *testing.T) {
 	}
 	_ = renderERDDiagram(g, 100)
 	_ = renderERDDiagram(g, 40)
-	_ = renderERDList(g, 5)
-	_ = renderERDList(types.ERDGraph{Tables: g.Tables}, 40) // no edges
+	_ = renderERDList(g, 5, true)
+	_ = renderERDList(types.ERDGraph{Tables: g.Tables}, 40, true) // no edges
 
 	// erdLayers: cycles (empty layer + stack hit), self/external skip, empty graph
 	cycle := types.ERDGraph{

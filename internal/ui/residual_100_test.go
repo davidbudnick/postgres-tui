@@ -260,18 +260,18 @@ func TestConnectionsFramePadAndERDResidual(t *testing.T) {
 	// routeEdge close children (cy <= py+1)
 	p := erdNode{x: 5, y: 5, w: 6, h: 3, table: types.ERDTable{Name: "p"}}
 	ch := erdNode{x: 5, y: 6, w: 6, h: 3, table: types.ERDTable{Name: "c"}}
-	c.routeEdge(p, ch, "lbl")
+	c.routeEdge(p, ch, "lbl", 0)
 	// wide label near edge
 	p2 := erdNode{x: 1, y: 1, w: 4, h: 2, table: types.ERDTable{Name: "p"}}
 	c2 := erdNode{x: 20, y: 8, w: 4, h: 2, table: types.ERDTable{Name: "c"}}
-	c.routeEdge(p2, c2, "verylonglabelname")
+	c.routeEdge(p2, c2, "verylonglabelname", 0)
 	// child left of parent
 	c3 := erdNode{x: 1, y: 10, w: 4, h: 2, table: types.ERDTable{Name: "c"}}
-	c.routeEdge(erdNode{x: 15, y: 1, w: 4, h: 2, table: types.ERDTable{Name: "p"}}, c3, "ab")
+	c.routeEdge(erdNode{x: 15, y: 1, w: 4, h: 2, table: types.ERDTable{Name: "p"}}, c3, "ab", 0)
 	// straight down
-	c.routeEdge(erdNode{x: 10, y: 1, w: 4, h: 2}, erdNode{x: 10, y: 10, w: 4, h: 2}, "")
+	c.routeEdge(erdNode{x: 10, y: 1, w: 4, h: 2}, erdNode{x: 10, y: 10, w: 4, h: 2}, "", 0)
 	// midY clamps
-	c.routeEdge(erdNode{x: 2, y: 2, w: 2, h: 1}, erdNode{x: 8, y: 5, w: 2, h: 1}, "z")
+	c.routeEdge(erdNode{x: 2, y: 2, w: 2, h: 1}, erdNode{x: 8, y: 5, w: 2, h: 1}, "z", 0)
 
 	// erdLayers empty out fallback + cycle
 	g := types.ERDGraph{}
