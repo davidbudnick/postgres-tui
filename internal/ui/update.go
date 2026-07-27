@@ -163,7 +163,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.Loading = false
 		if msg.Err != nil {
 			// Don't clobber a healthy workspace with a stale list-databases race.
-			if !m.isWorkspaceScreen() {
+			if !m.isWorkspaceScreen() && m.Screen != types.ScreenDatabasePicker {
 				m.Err = msg.Err
 			}
 			return m, nil
@@ -173,6 +173,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		for i, db := range m.Databases {
 			if db.Name == m.CurrentDatabase {
 				m.SelectedDBIdx = i
+				if m.Screen == types.ScreenDatabasePicker {
+					m.PaletteIdx = i
+				}
 				break
 			}
 		}
@@ -405,10 +408,16 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		m.Screen = types.ScreenCommandPalette
 		m.PaletteIdx = 0
 		if m.Inputs != nil {
+			m.Inputs.PaletteInput.Placeholder = "Filter commands…"
 			m.Inputs.PaletteInput.SetValue("")
 			m.Inputs.PaletteInput.Focus()
 		}
 		return m, nil
+	}
+
+	// Quick database switcher popup (connected only)
+	if key == "b" && !m.typingContext() && m.CurrentConn != nil {
+		return m.openDatabasePicker()
 	}
 
 	// Object tree search is workspace-global (not just ScreenBrowser).
@@ -466,6 +475,8 @@ func (m Model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.keysExport(key, msg)
 	case types.ScreenCommandPalette:
 		return m.keysPalette(key, msg)
+	case types.ScreenDatabasePicker:
+		return m.keysDatabasePicker(key, msg)
 	}
 
 	if key == "q" && !m.typingContext() {
@@ -1096,6 +1107,100 @@ func (m Model) openDatabasesContent() (tea.Model, tea.Cmd) {
 	if m.Cmds != nil {
 		m.Loading = true
 		return m, m.Cmds.LoadDatabases()
+	}
+	return m, nil
+}
+
+// openDatabasePicker opens a filterable modal to switch databases.
+func (m Model) openDatabasePicker() (tea.Model, tea.Cmd) {
+	if m.CurrentConn == nil {
+		m.StatusMsg = "Connect first"
+		return m, nil
+	}
+	if m.Screen != types.ScreenDatabasePicker {
+		m.PrevScreen = m.Screen
+	}
+	m.Screen = types.ScreenDatabasePicker
+	m.PaletteIdx = 0
+	if m.Inputs != nil {
+		m.Inputs.PaletteInput.Placeholder = "Filter databases…"
+		m.Inputs.PaletteInput.SetValue("")
+		m.Inputs.PaletteInput.Focus()
+	}
+	for i, db := range m.Databases {
+		if db.Name == m.CurrentDatabase {
+			m.PaletteIdx = i
+			break
+		}
+	}
+	if len(m.Databases) == 0 && m.Cmds != nil {
+		m.Loading = true
+		return m, m.Cmds.LoadDatabases()
+	}
+	return m, nil
+}
+
+// filteredDatabases returns databases matching the picker filter.
+func (m Model) filteredDatabases() []types.DatabaseInfo {
+	filter := ""
+	if m.Inputs != nil {
+		filter = strings.ToLower(strings.TrimSpace(m.Inputs.PaletteInput.Value()))
+	}
+	if filter == "" {
+		out := make([]types.DatabaseInfo, len(m.Databases))
+		copy(out, m.Databases)
+		return out
+	}
+	var out []types.DatabaseInfo
+	for _, db := range m.Databases {
+		if strings.Contains(strings.ToLower(db.Name), filter) ||
+			strings.Contains(strings.ToLower(db.Owner), filter) {
+			out = append(out, db)
+		}
+	}
+	return out
+}
+
+func (m Model) keysDatabasePicker(key string, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
+	items := m.filteredDatabases()
+	switch key {
+	case "esc":
+		m.Screen = m.PrevScreen
+		if m.Screen == types.ScreenDatabasePicker {
+			m.Screen = types.ScreenBrowser
+		}
+		return m, nil
+	case "down", "ctrl+n", "j":
+		if len(items) > 0 {
+			m.PaletteIdx = min(m.PaletteIdx+1, len(items)-1)
+		}
+		return m, nil
+	case "up", "ctrl+p", "k":
+		m.PaletteIdx = max(m.PaletteIdx-1, 0)
+		return m, nil
+	case "enter":
+		if len(items) == 0 || m.Cmds == nil {
+			return m, nil
+		}
+		db := items[clamp(m.PaletteIdx, 0, len(items)-1)]
+		prev := m.PrevScreen
+		if prev == types.ScreenDatabasePicker {
+			prev = types.ScreenBrowser
+		}
+		m.Screen = prev
+		if db.Name == m.CurrentDatabase {
+			m.StatusMsg = m.CurrentDatabase
+			return m, nil
+		}
+		m.Loading = true
+		m.Err = nil
+		return m, m.Cmds.SelectDatabase(db.Name)
+	}
+	if m.Inputs != nil {
+		var cmd tea.Cmd
+		m.Inputs.PaletteInput, cmd = m.Inputs.PaletteInput.Update(msg)
+		m.PaletteIdx = 0
+		return m, cmd
 	}
 	return m, nil
 }
@@ -1931,7 +2036,7 @@ func (m Model) runPalette(id string) (tea.Model, tea.Cmd) {
 		m.ContentMode = contentPreview
 		return m.loadObjectsForNav()
 	case "databases":
-		return m.openDatabasesContent()
+		return m.openDatabasePicker()
 	case "disconnect":
 		if m.Cmds != nil {
 			return m, m.Cmds.Disconnect()
