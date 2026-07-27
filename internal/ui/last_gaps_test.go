@@ -115,16 +115,16 @@ func TestRouteEdgeMidYClamps(t *testing.T) {
 	p := erdNode{x: 5, y: 5, w: 4, h: 2}  // py = 7
 	ch := erdNode{x: 5, y: 9, w: 4, h: 2} // cy = 9, cy > py+1 (7+1=8) so 9>8 ok
 	// midY = (7+9)/2 = 8; midY <= py? 8<=7 false; midY >= cy-1=8? 8>=8 true → midY = 7
-	c.routeEdge(p, ch, "x")
+	c.routeEdge(p, ch, "x", 0)
 	// even tighter
 	p2 := erdNode{x: 10, y: 2, w: 4, h: 1}  // py=3
 	ch2 := erdNode{x: 20, y: 5, w: 4, h: 1} // cy=5
 	// midY=(3+5)/2=4; 4<=3? no; 4>=4? yes → midY=3; midY<py? no
-	c.routeEdge(p2, ch2, "longlabelxx")
+	c.routeEdge(p2, ch2, "longlabelxx", 0)
 	// labX < 0 path via extreme positions
 	p3 := erdNode{x: 0, y: 0, w: 2, h: 1}
 	ch3 := erdNode{x: 0, y: 10, w: 2, h: 1}
-	c.routeEdge(p3, ch3, "L")
+	c.routeEdge(p3, ch3, "L", 0)
 }
 
 func TestErdLayersEmptyOut(t *testing.T) {

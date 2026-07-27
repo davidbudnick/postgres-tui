@@ -275,12 +275,12 @@ func TestFinalGaps_ERDComplex(t *testing.T) {
 	n1 := erdNode{name: "a", x: 1, y: 1, w: 8, h: 4, table: types.ERDTable{Name: "a", Columns: []string{"id"}}, layer: 0}
 	n2 := erdNode{name: "b", x: 12, y: 1, w: 8, h: 4, table: types.ERDTable{Name: "b", Columns: []string{"id"}}, layer: 0}
 	// same layer may still route
-	c.routeEdge(n1, n2, "lbl")
+	c.routeEdge(n1, n2, "lbl", 0)
 	n3 := erdNode{name: "c", x: 1, y: 6, w: 8, h: 4, table: types.ERDTable{Name: "c", Columns: []string{"id"}}, layer: 1}
-	c.routeEdge(n1, n3, "")
+	c.routeEdge(n1, n3, "", 0)
 	// child left of parent
 	n4 := erdNode{name: "d", x: 0, y: 6, w: 6, h: 3, table: types.ERDTable{Name: "d"}, layer: 1}
-	c.routeEdge(n2, n4, "x")
+	c.routeEdge(n2, n4, "x", 0)
 }
 
 func TestFinalGaps_Views(t *testing.T) {

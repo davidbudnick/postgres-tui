@@ -453,7 +453,7 @@ func TestViewBranchesRemaining(t *testing.T) {
 		Edges: []types.FKEdge{{FromTable: "c", FromCols: []string{"p_id"}, ToTable: "p", ToCols: []string{"id"}}},
 	}
 	_ = m.viewERDContent(80, 30)
-	_ = renderERDList(m.ERD, 5)
+	_ = renderERDList(m.ERD, 5, true)
 	_ = maxLayerWidth([][]string{{"aa"}, {"b"}})
 	_ = maxLayerWidth(nil)
 	layers := erdLayers(m.ERD)
@@ -468,7 +468,7 @@ func TestViewBranchesRemaining(t *testing.T) {
 	child := erdNode{x: 1, y: 7, w: 8, h: 3, name: "c", table: types.ERDTable{Name: "c", Columns: []string{"id"}}}
 	c.drawBox(parent, nil)
 	c.drawBox(child, map[string]bool{"c.id": true})
-	c.routeEdge(parent, child, "fk")
-	c.routeEdge(parent, erdNode{x: 1, y: 2, w: 4, h: 2}, "early")
+	c.routeEdge(parent, child, "fk", 0)
+	c.routeEdge(parent, erdNode{x: 1, y: 2, w: 4, h: 2}, "early", 0)
 	_ = c.lines()
 }
