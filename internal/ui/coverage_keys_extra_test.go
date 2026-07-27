@@ -805,6 +805,28 @@ func TestExtra_KeysERD(t *testing.T) {
 	if cmd == nil {
 		t.Fatal("r openERD")
 	}
+	// Focus / all toggles
+	m.Objects = []types.SchemaObject{{Name: "users", Kind: types.ObjectTable}}
+	m.SelectedObjIdx = 0
+	m.ERD = types.ERDGraph{Tables: []types.ERDTable{{Name: "users"}}}
+	m.Focus = focusContent
+	m.Screen = types.ScreenERD
+	nm2, _ := m.keysERD("a")
+	m = nm2.(Model)
+	if !m.ERDFocusAll {
+		t.Fatal("a should show all")
+	}
+	nm2, _ = m.keysERD("f")
+	m = nm2.(Model)
+	if m.ERDFocusAll {
+		t.Fatal("f should focus selection")
+	}
+	m.Objects = nil
+	nm2, _ = m.keysERD("f")
+	m = nm2.(Model)
+	if m.StatusMsg == "" {
+		t.Fatal("expected focus hint status")
+	}
 	_, _ = m.keysERD("z")
 }
 

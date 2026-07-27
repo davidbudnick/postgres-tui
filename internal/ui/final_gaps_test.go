@@ -207,7 +207,7 @@ func TestFinalGaps_PaintAndEditor(t *testing.T) {
 
 func TestFinalGaps_ERDComplex(t *testing.T) {
 	// empty tables
-	_ = renderERDDiagram(types.ERDGraph{}, 80)
+	_ = renderERDDiagram(types.ERDGraph{}, 80, "")
 	// tables with empty columns
 	g := types.ERDGraph{
 		Tables: []types.ERDTable{
@@ -225,8 +225,8 @@ func TestFinalGaps_ERDComplex(t *testing.T) {
 			{FromTable: "c", FromCols: []string{"id"}, ToTable: "c", ToCols: []string{"id"}},
 		},
 	}
-	_ = renderERDDiagram(g, 100)
-	_ = renderERDDiagram(g, 30)
+	_ = renderERDDiagram(g, 100, "")
+	_ = renderERDDiagram(g, 30, "")
 
 	// cycle for stack detection in erdLayers
 	g2 := types.ERDGraph{
