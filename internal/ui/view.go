@@ -43,6 +43,8 @@ func (m Model) getScreenView() string {
 		return m.viewExport()
 	case types.ScreenCommandPalette:
 		return m.viewCommandPalette()
+	case types.ScreenDatabasePicker:
+		return m.viewDatabasePicker()
 	default:
 		return ""
 	}
@@ -82,7 +84,7 @@ func (m Model) render() string {
 	switch m.Screen {
 	case types.ScreenConnections, types.ScreenAddConnection, types.ScreenEditConnection,
 		types.ScreenConfirmDelete, types.ScreenTestConnection, types.ScreenHelp,
-		types.ScreenCommandPalette, types.ScreenExport:
+		types.ScreenCommandPalette, types.ScreenDatabasePicker, types.ScreenExport:
 		vPos = lipgloss.Center
 		hPos = lipgloss.Center
 	case types.ScreenBrowser, types.ScreenTableData, types.ScreenTableDetail,
@@ -977,6 +979,7 @@ func (m Model) viewHelp() string {
 			{"space", "Toggle filter"},
 			{"1-6", "Kind filters"},
 			{"/", "Search"},
+			{"b", "Switch database"},
 			{";", "SQL editor"},
 			{":", "SQL editor"},
 			{"D", "Structure"},
@@ -1186,5 +1189,54 @@ func (m Model) viewCommandPalette() string {
 			b.WriteString("\n")
 		}
 	}
+	return m.formModal(b.String())
+}
+
+func (m Model) viewDatabasePicker() string {
+	var b strings.Builder
+	b.WriteString(titleStyle.Render("Switch Database"))
+	if m.CurrentDatabase != "" {
+		b.WriteString(dimStyle.Render("  ·  " + m.CurrentDatabase))
+	}
+	b.WriteString("\n\n")
+	if m.Inputs != nil {
+		b.WriteString(m.Inputs.PaletteInput.View())
+		b.WriteString("\n\n")
+	}
+	if m.Loading && len(m.Databases) == 0 {
+		b.WriteString(dimStyle.Render("Loading databases…"))
+		return m.formModal(b.String())
+	}
+	items := m.filteredDatabases()
+	if len(items) == 0 {
+		b.WriteString(dimStyle.Render("No matches"))
+	} else {
+		idx := clamp(m.PaletteIdx, 0, len(items)-1)
+		maxVisible := 12
+		start, end := listWindow(idx, len(items), maxVisible)
+		for i := start; i < end; i++ {
+			db := items[i]
+			mark := "  "
+			if db.Name == m.CurrentDatabase {
+				mark = "● "
+			}
+			line := fmt.Sprintf("%s%s  %s", mark, padRight(db.Name, 28), padRight(db.SizePretty, 10))
+			switch {
+			case i == idx:
+				b.WriteString(selectedStyle.Render(padRight(line, 48)))
+			case db.Name == m.CurrentDatabase:
+				b.WriteString(greenStyle.Render(padRight(line, 48)))
+			default:
+				b.WriteString(dimStyle.Render(line))
+			}
+			b.WriteString("\n")
+		}
+		if len(items) > maxVisible {
+			b.WriteString(dimStyle.Render(fmt.Sprintf("  ↕ %d–%d of %d", start+1, end, len(items))))
+			b.WriteString("\n")
+		}
+	}
+	b.WriteString("\n")
+	b.WriteString(dimStyle.Render("↑/↓ navigate  enter open  esc cancel  type to filter"))
 	return m.formModal(b.String())
 }

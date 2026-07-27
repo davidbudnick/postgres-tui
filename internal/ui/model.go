@@ -333,7 +333,7 @@ func defaultPaletteItems() []PaletteItem {
 		{ID: "server", Label: "Server info", Keys: "i", Group: "Server"},
 		{ID: "tables", Label: "Browse tables", Keys: "", Group: "Browse"},
 		{ID: "views", Label: "Browse views", Keys: "", Group: "Browse"},
-		{ID: "databases", Label: "Switch database", Keys: "", Group: "Connection"},
+		{ID: "databases", Label: "Switch database", Keys: "b", Group: "Connection"},
 		{ID: "disconnect", Label: "Disconnect", Keys: "", Group: "Connection"},
 		{ID: "help", Label: "Help", Keys: "?", Group: "App"},
 		{ID: "logs", Label: "App logs", Keys: "L", Group: "App"},

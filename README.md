@@ -142,7 +142,9 @@ rm -f $(go env GOPATH)/bin/postgres-tui
 | `ctrl+enter` / `ctrl+e` | Run SQL in the editor |
 | `A` | Activity |
 | `i` | Server info |
+| `b` | Switch database (filterable popup) |
 | `/` | Filter objects |
+| `ctrl+p` | Command palette |
 | `?` | Help |
 | `esc` | Back |
 | `q` | Quit |

@@ -87,7 +87,7 @@ func (m Model) typingContext() bool {
 	}
 	switch m.Screen {
 	case types.ScreenAddConnection, types.ScreenEditConnection,
-		types.ScreenExport, types.ScreenCommandPalette:
+		types.ScreenExport, types.ScreenCommandPalette, types.ScreenDatabasePicker:
 		return true
 	case types.ScreenQuery:
 		return m.Focus == focusContent && m.QueryFocus == "editor" && m.QueryArea != nil

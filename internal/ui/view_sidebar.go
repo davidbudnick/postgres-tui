@@ -826,6 +826,7 @@ func (m Model) viewWorkspaceFooter() string {
 				struct{ key, desc string }{"D", "struct"},
 				struct{ key, desc string }{"/", "search"},
 				struct{ key, desc string }{";", "query"},
+				struct{ key, desc string }{"b", "db"},
 				struct{ key, desc string }{"esc", "disconnect"},
 			)
 		}
@@ -837,12 +838,14 @@ func (m Model) viewWorkspaceFooter() string {
 			struct{ key, desc string }{"Y", "row"},
 			struct{ key, desc string }{"x", "export"},
 			struct{ key, desc string }{"D", "struct"},
+			struct{ key, desc string }{"b", "db"},
 			struct{ key, desc string }{"esc", "tree"},
 		)
 	case types.ScreenTableDetail:
 		keys = append(keys,
 			struct{ key, desc string }{"h/l", "tabs"},
 			struct{ key, desc string }{"enter", "data"},
+			struct{ key, desc string }{"b", "db"},
 			struct{ key, desc string }{"esc", "tree"},
 		)
 	case types.ScreenQuery:
@@ -852,22 +855,26 @@ func (m Model) viewWorkspaceFooter() string {
 			struct{ key, desc string }{"tab", "complete"},
 			struct{ key, desc string }{"↑↓", "suggest"},
 			struct{ key, desc string }{"x", "export"},
+			struct{ key, desc string }{"b", "db"},
 			struct{ key, desc string }{"esc", "tree"},
 		)
 	case types.ScreenActivity:
 		keys = append(keys,
 			struct{ key, desc string }{"r", "refresh"},
+			struct{ key, desc string }{"b", "db"},
 			struct{ key, desc string }{"esc", "tree"},
 		)
 	case types.ScreenERD:
 		keys = append(keys,
 			struct{ key, desc string }{"j/k", "scroll"},
 			struct{ key, desc string }{"r", "refresh"},
+			struct{ key, desc string }{"b", "db"},
 			struct{ key, desc string }{"esc", "tree"},
 		)
 	case types.ScreenServerInfo:
 		keys = append(keys,
 			struct{ key, desc string }{"r", "refresh"},
+			struct{ key, desc string }{"b", "db"},
 			struct{ key, desc string }{"esc", "tree"},
 		)
 	}
