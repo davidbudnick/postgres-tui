@@ -36,16 +36,65 @@ ER diagram for the current schema:
 ## Quick Install
 
 ```bash
-# From source (Go 1.26+)
-git clone https://github.com/davidbudnick/postgres-tui.git
-cd postgres-tui
-make build
-./bin/postgres-tui
+# Native install — recommended (macOS and Linux)
+curl -fsSL https://raw.githubusercontent.com/davidbudnick/postgres-tui/main/install.sh | bash
+
+# Homebrew (macOS and Linux)
+brew tap davidbudnick/homebrew-tap
+brew install --cask postgres-tui
+
+# Go (requires Go 1.26+)
+go install github.com/davidbudnick/postgres-tui@latest
 ```
+
+> **Pre-built binaries** — [Download from GitHub Releases](https://github.com/davidbudnick/postgres-tui/releases)
 
 ## Terminal font
 
 **No special font package required.** TOOLS tags and chrome use plain ASCII (`> * + @ #`, etc.), so the default monospace font in iTerm2, Terminal.app, Kitty, WezTerm, Ghostty, or Alacritty is fine. A Nerd Font is optional eye candy only—not a dependency.
+
+## Installation
+
+### Native Install (Recommended)
+
+The install script auto-detects your OS and architecture, downloads the latest release, verifies the checksum, and installs the binary to `~/.local/bin` (override with `INSTALL_DIR`):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/davidbudnick/postgres-tui/main/install.sh | bash
+
+# Custom install directory
+INSTALL_DIR=/usr/local/bin curl -fsSL https://raw.githubusercontent.com/davidbudnick/postgres-tui/main/install.sh | bash
+```
+
+### Homebrew
+
+See [Quick Install](#quick-install) above.
+
+### From Source
+
+```bash
+# Clone the repository
+git clone https://github.com/davidbudnick/postgres-tui.git
+cd postgres-tui
+
+# Build
+make build
+
+# Install to GOPATH/bin
+make install
+```
+
+### Pre-built Binaries
+
+Download the latest release from the [Releases](https://github.com/davidbudnick/postgres-tui/releases) page. Pre-built binaries are available for macOS, Linux, and Windows with no Go installation required.
+
+### Using Go Install
+
+> **Note:** Requires Go 1.26 or later.
+
+```bash
+go install github.com/davidbudnick/postgres-tui@latest
+```
 
 ## Usage
 
@@ -58,6 +107,22 @@ postgres-tui --host localhost --user postgres --password secret --database mydb
 
 # Read-only
 postgres-tui --host db.example.com --read-only --sslmode require
+
+# Update to the latest version
+postgres-tui --update
+```
+
+### Uninstall
+
+```bash
+# Native install
+rm -f ~/.local/bin/postgres-tui
+
+# Homebrew
+brew uninstall --cask postgres-tui
+
+# Go
+rm -f $(go env GOPATH)/bin/postgres-tui
 ```
 
 ### Keybindings
