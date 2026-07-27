@@ -48,8 +48,11 @@ func TestIsSemver(t *testing.T) {
 }
 
 func TestArchiveName(t *testing.T) {
-	if archiveName("1.0.0", "darwin", "arm64") != "postgres-tui_1.0.0_darwin_arm64.tar.gz" {
+	if archiveName("1.0.0", "darwin", "arm64") != "postgres-tui_1.0.0_Darwin_arm64.tar.gz" {
 		t.Fatal(archiveName("1.0.0", "darwin", "arm64"))
+	}
+	if archiveName("1.0.0", "linux", "amd64") != "postgres-tui_1.0.0_Linux_x86_64.tar.gz" {
+		t.Fatal(archiveName("1.0.0", "linux", "amd64"))
 	}
 }
 

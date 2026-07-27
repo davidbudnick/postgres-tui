@@ -158,7 +158,24 @@ func fetchLatestVersion() (string, error) {
 }
 
 func archiveName(ver, goos, goarch string) string {
-	return fmt.Sprintf("postgres-tui_%s_%s_%s.tar.gz", ver, goos, goarch)
+	// Match install.sh: Darwin|Linux + x86_64|arm64
+	osLabel := goos
+	switch goos {
+	case "darwin":
+		osLabel = "Darwin"
+	case "linux":
+		osLabel = "Linux"
+	case "windows":
+		osLabel = "Windows"
+	}
+	archLabel := goarch
+	switch goarch {
+	case "amd64":
+		archLabel = "x86_64"
+	case "arm64":
+		archLabel = "arm64"
+	}
+	return fmt.Sprintf("postgres-tui_%s_%s_%s.tar.gz", ver, osLabel, archLabel)
 }
 
 func downloadFile(url, dest string) error {
