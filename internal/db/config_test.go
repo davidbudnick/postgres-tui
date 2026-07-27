@@ -1,9 +1,7 @@
 package db
 
 import (
-	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/davidbudnick/postgres-tui/internal/types"
@@ -52,50 +50,14 @@ func TestConfig_AddListDelete(t *testing.T) {
 	}
 }
 
-func TestConfig_EnsureDemoConnections(t *testing.T) {
+func TestConfig_EmptyOnFirstRun(t *testing.T) {
 	cfg := newTestConfig(t)
-	if err := cfg.EnsureDemoConnections(); err != nil {
-		t.Fatal(err)
-	}
 	list, err := cfg.ListConnections()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(list) != 2 {
-		t.Fatalf("len=%d want 2 demos", len(list))
-	}
-	if list[0].Name != "Local Demo" || list[0].Database != "demo" {
-		t.Fatalf("first: %+v", list[0])
-	}
-	if list[1].Name != "Analytics (RO)" || !list[1].ReadOnly {
-		t.Fatalf("second: %+v", list[1])
-	}
-	// In-memory demo password for localhost connect flow.
-	if list[0].Password != "postgres" {
-		t.Fatalf("demo password not hydrated: %q", list[0].Password)
-	}
-	// Idempotent
-	if err := cfg.EnsureDemoConnections(); err != nil {
-		t.Fatal(err)
-	}
-	list, _ = cfg.ListConnections()
-	if len(list) != 2 {
-		t.Fatalf("re-ensure grew list: %d", len(list))
-	}
-	// Disk still strips password
-	reloaded := reloadConfig(t, cfg)
-	list, _ = reloaded.ListConnections()
-	if list[0].Password != "postgres" {
-		// hydrate runs on NewConfig
-		t.Fatalf("reloaded should hydrate demo password, got %q", list[0].Password)
-	}
-	// Confirm on-disk file has no password
-	raw, err := os.ReadFile(cfg.path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if strings.Contains(string(raw), `"password": "postgres"`) {
-		t.Fatal("password must not be written to disk")
+	if len(list) != 0 {
+		t.Fatalf("first run should have no seeded connections, got %d", len(list))
 	}
 }
 

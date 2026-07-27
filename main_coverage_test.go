@@ -143,20 +143,20 @@ func TestSetupAndInitConfig(t *testing.T) {
 		t.Fatalf("%+v", m.CLIConnection)
 	}
 
-	// EnsureDemoConnections save fail (config dir not writable)
-	locked := t.TempDir()
-	cfgDir := filepath.Join(locked, ".config", "postgres-tui")
-	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(cfgDir, 0o555); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(cfgDir, 0o755) })
-	t.Setenv("HOME", locked)
+	// Empty config loads with no seeded connections
+	fresh := t.TempDir()
+	t.Setenv("HOME", fresh)
 	os.Args = []string{"postgres-tui"}
-	if _, err := setup(); err == nil {
-		t.Fatal("expected ensure demo fail")
+	m, err = setup()
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, listErr := m.Cmds.Config().ListConnections()
+	if listErr != nil {
+		t.Fatal(listErr)
+	}
+	if len(list) != 0 {
+		t.Fatalf("expected no seeded connections, got %d", len(list))
 	}
 	t.Setenv("HOME", home)
 

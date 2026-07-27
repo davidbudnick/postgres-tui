@@ -164,21 +164,26 @@ Prefill: with a table/view selected, `;` inserts `SELECT * FROM schema.table LIM
 make demo-run
 ```
 
-That starts Postgres, seeds sample data, and launches the TUI. On first run the app seeds two saved instances:
+That starts Postgres, seeds sample data, and launches the TUI with an **isolated** config copied from `docs/demo-config.json` (your real `~/.config/postgres-tui` is never modified). Instances come only from config — nothing is hardcoded or auto-seeded.
 
 | Name | Database | Notes |
 |------|----------|--------|
 | **Local Demo** | `demo` | Full seed data (tables, orders, analytics) |
 | **Analytics (RO)** | `postgres` | Read-only browse |
 
-Then: select **Local Demo** → `enter` → pick `demo` → browse tables → `enter` for data / `D` structure / `;` query (`ctrl+enter` to run).
+Then: select **Local Demo** → `enter` → enter password `postgres` if prompted → browse tables → `enter` for data / `D` structure / `;` query (`ctrl+enter` to run).
 
 ```bash
-# Or step by step:
+# Or step by step (uses your normal config — empty until you add instances):
 make docker-up && make docker-seed && make run
 
 # Or CLI quick-connect (skips the instance list):
 ./bin/postgres-tui --host localhost --user postgres --password postgres --database demo --sslmode disable
+
+# Or point at the demo config without polluting HOME:
+mkdir -p /tmp/pg-tui-demo/.config/postgres-tui
+cp docs/demo-config.json /tmp/pg-tui-demo/.config/postgres-tui/config.json
+HOME=/tmp/pg-tui-demo ./bin/postgres-tui
 ```
 
 ## Recording demos

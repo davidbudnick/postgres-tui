@@ -174,33 +174,7 @@ func TestConfig_SaveErrorPaths(t *testing.T) {
 	if err := cfg.DeleteSavedQuery("q"); err == nil {
 		t.Fatal("del query")
 	}
-	// EnsureDemoConnections save fail
-	cfg2 := newTestConfig(t)
-	jsonMarshalIndent = func(any, string, string) ([]byte, error) {
-		return nil, errors.New("marshal")
-	}
-	if err := cfg2.EnsureDemoConnections(); err == nil {
-		t.Fatal("demo")
-	}
 	jsonMarshalIndent = old
-}
-
-func TestConfig_IsLocalDemoConn(t *testing.T) {
-	cases := []struct {
-		c    types.Connection
-		want bool
-	}{
-		{types.Connection{Host: "localhost", Port: 5432, Username: "postgres"}, true},
-		{types.Connection{Host: "127.0.0.1", Port: 0, Username: "postgres"}, true},
-		{types.Connection{Host: "remote", Port: 5432, Username: "postgres"}, false},
-		{types.Connection{Host: "localhost", Port: 5433, Username: "postgres"}, false},
-		{types.Connection{Host: "localhost", Port: 5432, Username: "other"}, false},
-	}
-	for _, tc := range cases {
-		if got := isLocalDemoConn(tc.c); got != tc.want {
-			t.Fatalf("%+v got %v want %v", tc.c, got, tc.want)
-		}
-	}
 }
 
 func TestConfig_LoadCorrupt(t *testing.T) {
@@ -236,8 +210,11 @@ func TestConfig_NewConfigDefaultsFromDisk(t *testing.T) {
 		t.Fatal(cfg.nextID)
 	}
 	list, _ := cfg.ListConnections()
-	if list[0].Password != "postgres" {
-		t.Fatalf("hydrate: %q", list[0].Password)
+	if len(list) != 1 || list[0].Name != "x" {
+		t.Fatalf("connections: %+v", list)
+	}
+	if list[0].Password != "" {
+		t.Fatalf("password must stay empty when not on disk: %q", list[0].Password)
 	}
 }
 
