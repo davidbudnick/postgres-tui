@@ -119,7 +119,8 @@ func runUpdate(currentVersion string) error {
 }
 
 func isSemver(v string) bool {
-	return regexp.MustCompile(`^v?\d+\.\d+\.\d+`).MatchString(v)
+	// Exact release tags only — reject git-describe forms like v1.2.3-4-gabcdef.
+	return regexp.MustCompile(`^v?\d+\.\d+\.\d+$`).MatchString(v)
 }
 
 func isHomebrew(path string) bool {
