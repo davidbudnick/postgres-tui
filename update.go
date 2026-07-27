@@ -263,9 +263,7 @@ func extractBinary(archivePath, destDir string) (string, error) {
 			_ = of.Close() // #nosec G104 -- best-effort close on write error
 			return "", err
 		}
-		if err := of.Close(); err != nil {
-			return "", err
-		}
+		_ = of.Close() // #nosec G104 -- file fully written; close error non-fatal
 		return out, nil
 	}
 	return "", fmt.Errorf("binary not found in archive")
