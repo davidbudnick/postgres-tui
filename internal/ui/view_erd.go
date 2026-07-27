@@ -30,11 +30,20 @@ func (m Model) viewERDContent(width, height int) string {
 		schema = "public"
 	}
 
+	graph, focus := m.erdViewGraph()
+
 	b.WriteString(headerStyle.Render("ERD"))
 	b.WriteString("  ")
 	b.WriteString(accentStyle.Render(schema))
-	b.WriteString(dimStyle.Render(fmt.Sprintf("  ·  %d tables  ·  %d FKs",
-		len(m.ERD.Tables), len(m.ERD.Edges))))
+	if focus != "" {
+		b.WriteString(dimStyle.Render("  ·  focus "))
+		b.WriteString(accentStyle.Bold(true).Render(focus))
+		b.WriteString(dimStyle.Render(fmt.Sprintf("  ·  %d tables  ·  %d FKs",
+			len(graph.Tables), len(graph.Edges))))
+	} else {
+		b.WriteString(dimStyle.Render(fmt.Sprintf("  ·  %d tables  ·  %d FKs",
+			len(m.ERD.Tables), len(m.ERD.Edges))))
+	}
 	b.WriteByte('\n')
 	b.WriteString(gridSepStyle.Render(strings.Repeat("─", min(width, 100))))
 	b.WriteByte('\n')
@@ -50,12 +59,12 @@ func (m Model) viewERDContent(width, height int) string {
 		return b.String()
 	}
 
-	bodyH := max(height-3, 4)
+	bodyH := max(height-4, 4)
 	var lines []string
-	if width < erdListMinW || len(m.ERD.Tables) > erdMaxTables {
-		lines = renderERDList(m.ERD, width, true)
+	if width < erdListMinW || len(graph.Tables) > erdMaxTables {
+		lines = renderERDList(graph, width, true)
 	} else {
-		lines = renderERDDiagram(m.ERD, width)
+		lines = renderERDDiagram(graph, width, focus)
 	}
 
 	maxOff := max(len(lines)-bodyH, 0)
@@ -66,11 +75,69 @@ func (m Model) viewERDContent(width, height int) string {
 		b.WriteByte('\n')
 	}
 	if len(lines) > bodyH {
-		b.WriteString(dimStyle.Render(fmt.Sprintf("↕ %d–%d of %d  ·  j/k scroll  ·  r refresh",
+		b.WriteString(dimStyle.Render(fmt.Sprintf("↕ %d–%d of %d  ·  j/k scroll",
 			offset+1, end, len(lines))))
 		b.WriteByte('\n')
 	}
+	hint := "r refresh"
+	if focus != "" {
+		hint += "  ·  a all tables"
+	} else if m.erdFocusCandidate() != "" {
+		hint += "  ·  f focus selection"
+	}
+	b.WriteString(dimStyle.Render(hint))
+	b.WriteByte('\n')
 	return b.String()
+}
+
+// erdViewGraph returns the graph to render and an optional focus table name.
+func (m Model) erdViewGraph() (types.ERDGraph, string) {
+	if m.ERDFocusAll {
+		return m.ERD, ""
+	}
+	focus := m.erdFocusCandidate()
+	if focus == "" {
+		return m.ERD, ""
+	}
+	return erdFocusSubgraph(m.ERD, focus), focus
+}
+
+// erdFocusCandidate is the table to focus when auto-focus is on.
+func (m Model) erdFocusCandidate() string {
+	o, ok := m.selectedObject()
+	if !ok || o.Kind != types.ObjectTable {
+		return ""
+	}
+	for _, t := range m.ERD.Tables {
+		if t.Name == o.Name {
+			return o.Name
+		}
+	}
+	return ""
+}
+
+// erdFocusSubgraph keeps focus and its 1-hop FK neighbors.
+func erdFocusSubgraph(g types.ERDGraph, focus string) types.ERDGraph {
+	if focus == "" {
+		return g
+	}
+	keep := map[string]bool{focus: true}
+	var edges []types.FKEdge
+	for _, e := range g.Edges {
+		if e.FromTable == focus || e.ToTable == focus {
+			keep[e.FromTable] = true
+			keep[e.ToTable] = true
+			edges = append(edges, e)
+		}
+	}
+	// Include edges between kept neighbors (e.g. sibling FKs not needed; only 1-hop).
+	var tables []types.ERDTable
+	for _, t := range g.Tables {
+		if keep[t.Name] {
+			tables = append(tables, t)
+		}
+	}
+	return types.ERDGraph{Schema: g.Schema, Tables: tables, Edges: edges}
 }
 
 // renderERDList renders the FK edge list. withHeader controls the section title.
@@ -226,23 +293,27 @@ func (c *erdCanvas) writeStr(x, y int, s string, a byte) {
 	}
 }
 
-func (c *erdCanvas) drawBox(n erdNode, fkCols map[string]bool) {
+func (c *erdCanvas) drawBox(n erdNode, fkCols map[string]bool, highlight bool) {
 	inner := n.w - 2
-	c.put(n.x, n.y, '┌', 1)
-	c.put(n.x+n.w-1, n.y, '┐', 1)
-	c.put(n.x, n.y+n.h-1, '└', 1)
-	c.put(n.x+n.w-1, n.y+n.h-1, '┘', 1)
-	c.hline(n.x+1, n.x+n.w-2, n.y, 1)
-	c.hline(n.x+1, n.x+n.w-2, n.y+n.h-1, 1)
+	border := byte(1)
+	if highlight {
+		border = 2
+	}
+	c.put(n.x, n.y, '┌', border)
+	c.put(n.x+n.w-1, n.y, '┐', border)
+	c.put(n.x, n.y+n.h-1, '└', border)
+	c.put(n.x+n.w-1, n.y+n.h-1, '┘', border)
+	c.hline(n.x+1, n.x+n.w-2, n.y, border)
+	c.hline(n.x+1, n.x+n.w-2, n.y+n.h-1, border)
 	for y := n.y + 1; y < n.y+n.h-1; y++ {
-		c.put(n.x, y, '│', 1)
-		c.put(n.x+n.w-1, y, '│', 1)
+		c.put(n.x, y, '│', border)
+		c.put(n.x+n.w-1, y, '│', border)
 	}
 	title := truncate(n.name, inner)
 	c.writeStr(n.x+1, n.y+1, padRight(title, inner), 3)
-	c.put(n.x, n.y+2, '├', 1)
-	c.put(n.x+n.w-1, n.y+2, '┤', 1)
-	c.hline(n.x+1, n.x+n.w-2, n.y+2, 1)
+	c.put(n.x, n.y+2, '├', border)
+	c.put(n.x+n.w-1, n.y+2, '┤', border)
+	c.hline(n.x+1, n.x+n.w-2, n.y+2, border)
 
 	cols := orderERDColumns(n.name, n.table.Columns, fkCols, true)
 	if len(cols) > erdMaxCols {
@@ -384,7 +455,7 @@ func (c *erdCanvas) lines() []string {
 	return out
 }
 
-func renderERDDiagram(g types.ERDGraph, width int) []string {
+func renderERDDiagram(g types.ERDGraph, width int, focus string) []string {
 	if len(g.Tables) == 0 {
 		return nil
 	}
@@ -395,7 +466,7 @@ func renderERDDiagram(g types.ERDGraph, width int) []string {
 	var lines []string
 	if len(linked.Tables) > 0 {
 		layers := erdWrapLayers(erdBarycenterOrder(linked, erdLayers(linked)), erdMaxPerRow)
-		lines = append(lines, layoutERDCanvas(linked, layers, fkCols, width)...)
+		lines = append(lines, layoutERDCanvas(linked, layers, fkCols, width, focus)...)
 	}
 
 	if len(g.Edges) > 0 {
@@ -414,7 +485,7 @@ func renderERDDiagram(g types.ERDGraph, width int) []string {
 }
 
 // layoutERDCanvas places layered boxes and routes FK edges onto a canvas.
-func layoutERDCanvas(g types.ERDGraph, layers [][]string, fkCols map[string]bool, width int) []string {
+func layoutERDCanvas(g types.ERDGraph, layers [][]string, fkCols map[string]bool, width int, focus string) []string {
 	nAcross := maxLayerWidth(layers)
 	boxW := clamp((width-(nAcross-1)*erdHGap)/max(nAcross, 1), erdBoxMinW, erdBoxMaxW)
 
@@ -500,7 +571,7 @@ func layoutERDCanvas(g types.ERDGraph, layers [][]string, fkCols map[string]bool
 	}
 
 	for _, n := range nodes {
-		cv.drawBox(*n, fkCols)
+		cv.drawBox(*n, fkCols, focus != "" && n.name == focus)
 	}
 	return cv.lines()
 }

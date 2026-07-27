@@ -193,7 +193,7 @@ func TestERDLayersParentsAboveChildren(t *testing.T) {
 	if pos["users"] >= pos["orders"] || pos["orders"] >= pos["order_items"] {
 		t.Fatalf("bad layer order: %v pos=%v", layers, pos)
 	}
-	out := renderERDDiagram(g, 100)
+	out := renderERDDiagram(g, 100, "")
 	joined := strings.Join(out, "\n")
 	if !strings.Contains(joined, "users") || !strings.Contains(joined, "orders") {
 		t.Fatalf("diagram missing tables: %q", joined)

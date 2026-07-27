@@ -268,9 +268,9 @@ func TestERDHelpersCoverage(t *testing.T) {
 	_ = renderERDList(g, 80, true)
 	_ = renderERDList(types.ERDGraph{}, 40, true)
 	_ = renderERDList(g, 80, false)
-	_ = renderERDDiagram(g, 120)
-	_ = renderERDDiagram(g, 20)
-	_ = renderERDDiagram(types.ERDGraph{Tables: []types.ERDTable{{Name: "solo", Columns: []string{"id"}}}}, 80)
+	_ = renderERDDiagram(g, 120, "")
+	_ = renderERDDiagram(g, 20, "")
+	_ = renderERDDiagram(types.ERDGraph{Tables: []types.ERDTable{{Name: "solo", Columns: []string{"id"}}}}, 80, "")
 	// Isolates + multi-child edges for wrap/bus/partition paths
 	wide := types.ERDGraph{
 		Tables: []types.ERDTable{
@@ -291,7 +291,7 @@ func TestERDHelpersCoverage(t *testing.T) {
 			{FromTable: "c5", FromCols: []string{"hub_id"}, ToTable: "hub", ToCols: []string{"id"}},
 		},
 	}
-	_ = renderERDDiagram(wide, 100)
+	_ = renderERDDiagram(wide, 100, "")
 	linked, isolates := erdPartition(wide)
 	if len(isolates) < 2 || len(linked.Tables) < 2 {
 		t.Fatalf("partition linked=%d isolates=%d", len(linked.Tables), len(isolates))
@@ -307,12 +307,12 @@ func TestERDHelpersCoverage(t *testing.T) {
 	// Only isolates (no FKs) → diagram shows unconnected section
 	_ = renderERDDiagram(types.ERDGraph{
 		Tables: []types.ERDTable{{Name: "x", Columns: []string{"id"}}, {Name: "y", Columns: []string{"n"}}},
-	}, 80)
+	}, 80, "")
 	// Linked tables but empty edges after self-FK filter
 	_ = renderERDDiagram(types.ERDGraph{
 		Tables: []types.ERDTable{{Name: "t", Columns: []string{"id", "t_id", "a", "b", "c", "d", "e"}}},
 		Edges:  []types.FKEdge{{FromTable: "t", FromCols: []string{"t_id"}, ToTable: "t", ToCols: []string{"id"}}},
-	}, 80)
+	}, 80, "")
 	// Reverse-layer edge skipped (child.layer <= parent.layer)
 	_ = layoutERDCanvas(types.ERDGraph{
 		Tables: []types.ERDTable{{Name: "p", Columns: []string{"id"}}, {Name: "c", Columns: []string{"id", "p_id"}}},
@@ -321,7 +321,7 @@ func TestERDHelpersCoverage(t *testing.T) {
 			{FromTable: "p", FromCols: []string{"id"}, ToTable: "c", ToCols: []string{"id"}}, // reverse
 			{FromTable: "missing_from", FromCols: []string{"x"}, ToTable: "p", ToCols: []string{"id"}},
 		},
-	}, [][]string{{"p"}, {"c"}}, map[string]bool{"c.p_id": true, "p.id": true}, 80)
+	}, [][]string{{"p"}, {"c"}}, map[string]bool{"c.p_id": true, "p.id": true}, 80, "")
 	_ = erdWrapLayers([][]string{{"a", "b", "c", "d", "e", "f"}}, 4)
 	_ = erdWrapLayers([][]string{{"a", "b"}}, 4)
 	_ = erdWrapLayers(nil, 0)
@@ -365,8 +365,8 @@ func TestERDHelpersCoverage(t *testing.T) {
 	_ = mergeWireBox('┌', 'x')
 	n1 := erdNode{name: "a", x: 2, y: 2, w: 12, h: 5, table: types.ERDTable{Name: "a", Columns: []string{"id", "email"}}}
 	n2 := erdNode{name: "b", x: 20, y: 2, w: 12, h: 5, table: types.ERDTable{Name: "b", Columns: []string{"id", "a_id"}}}
-	c.drawBox(n1, map[string]bool{"a.id": true})
-	c.drawBox(n2, map[string]bool{"b.a_id": true})
+	c.drawBox(n1, map[string]bool{"a.id": true}, false)
+	c.drawBox(n2, map[string]bool{"b.a_id": true}, false)
 	c.routeEdge(n1, n2, "fk", 0)
 	n3 := erdNode{name: "c", x: 2, y: 12, w: 12, h: 4, table: types.ERDTable{Name: "c", Columns: []string{"id"}}}
 	c.routeEdge(n2, n3, "", 1)
@@ -392,22 +392,80 @@ func TestERDHelpersCoverage(t *testing.T) {
 	c2 := newERDCanvas(0, 0)
 	_ = c2
 	c3 := newERDCanvas(5, 5)
-	c3.drawBox(erdNode{name: "t", x: 0, y: 0, w: 10, h: 10, table: types.ERDTable{Name: "t", Columns: []string{"a", "b", "c", "d", "e"}}}, nil)
+	c3.drawBox(erdNode{name: "t", x: 0, y: 0, w: 10, h: 10, table: types.ERDTable{Name: "t", Columns: []string{"a", "b", "c", "d", "e"}}}, nil, false)
 	// many columns → ellipsis; FK accent; id plain
 	c3.drawBox(erdNode{
 		name: "wide", x: 0, y: 0, w: 14, h: 12,
 		table: types.ERDTable{Name: "wide", Columns: []string{"id", "a_id", "b_id", "c_id", "d_id", "note"}},
-	}, map[string]bool{"wide.a_id": true, "wide.b_id": true})
+	}, map[string]bool{"wide.a_id": true, "wide.b_id": true}, false)
 	_ = c3.lines()
 	// empty graph layout + missing table name → nCol==0 path
-	_ = layoutERDCanvas(types.ERDGraph{}, nil, nil, 40)
-	_ = layoutERDCanvas(types.ERDGraph{}, [][]string{{"ghost"}}, nil, 40)
+	_ = layoutERDCanvas(types.ERDGraph{}, nil, nil, 40, "")
+	_ = layoutERDCanvas(types.ERDGraph{}, [][]string{{"ghost"}}, nil, 40, "")
 	// nCol > erdMaxCols in layout (many FK cols)
 	_ = layoutERDCanvas(types.ERDGraph{
 		Tables: []types.ERDTable{{Name: "fat", Columns: []string{"id", "a_id", "b_id", "c_id", "d_id", "e_id"}}},
 	}, [][]string{{"fat"}}, map[string]bool{
 		"fat.a_id": true, "fat.b_id": true, "fat.c_id": true, "fat.d_id": true, "fat.e_id": true,
-	}, 40)
+	}, 40, "fat")
+	// Highlighted focus box
+	c4 := newERDCanvas(30, 12)
+	c4.drawBox(erdNode{name: "hub", x: 2, y: 2, w: 12, h: 6, table: types.ERDTable{Name: "hub", Columns: []string{"id"}}}, nil, true)
+	_ = c4.lines()
+	// Focus subgraph helpers
+	fg := types.ERDGraph{
+		Schema: "public",
+		Tables: []types.ERDTable{
+			{Name: "users", Columns: []string{"id"}},
+			{Name: "orders", Columns: []string{"id", "user_id"}},
+			{Name: "items", Columns: []string{"id"}},
+		},
+		Edges: []types.FKEdge{
+			{FromTable: "orders", FromCols: []string{"user_id"}, ToTable: "users", ToCols: []string{"id"}},
+		},
+	}
+	sub := erdFocusSubgraph(fg, "users")
+	if len(sub.Tables) != 2 || len(sub.Edges) != 1 {
+		t.Fatalf("focus subgraph: %+v", sub)
+	}
+	_ = erdFocusSubgraph(fg, "")
+	_ = erdFocusSubgraph(fg, "missing")
+	_ = renderERDDiagram(sub, 80, "users")
+
+	m := NewModel()
+	m.ERD = fg
+	m.Objects = []types.SchemaObject{
+		{Name: "users", Kind: types.ObjectTable},
+		{Name: "orders", Kind: types.ObjectTable},
+	}
+	m.SelectedObjIdx = 0
+	m.ERDFocusAll = false
+	g, focus := m.erdViewGraph()
+	if focus != "users" || len(g.Tables) != 2 {
+		t.Fatalf("view graph focus=%q tables=%d", focus, len(g.Tables))
+	}
+	m.ERDFocusAll = true
+	g, focus = m.erdViewGraph()
+	if focus != "" || len(g.Tables) != 3 {
+		t.Fatalf("all mode focus=%q tables=%d", focus, len(g.Tables))
+	}
+	m.ERDFocusAll = false
+	m.Objects = []types.SchemaObject{{Name: "nope", Kind: types.ObjectView}}
+	if m.erdFocusCandidate() != "" {
+		t.Fatal("view should not focus")
+	}
+	m.Objects = nil
+	if m.erdFocusCandidate() != "" {
+		t.Fatal("empty selection")
+	}
+	m.ERD = fg
+	m.Objects = []types.SchemaObject{{Name: "users", Kind: types.ObjectTable}}
+	m.SelectedObjIdx = 0
+	m.ERDFocusAll = false
+	m.Width, m.Height = 120, 40
+	_ = m.viewERDContent(100, 30)
+	m.ERDFocusAll = true
+	_ = m.viewERDContent(100, 30)
 }
 
 func TestModelHelpersRemainingBranches(t *testing.T) {

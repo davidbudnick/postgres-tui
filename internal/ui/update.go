@@ -1104,6 +1104,8 @@ func (m Model) openERD() (tea.Model, tea.Cmd) {
 	m = m.clearObjectContent()
 	m.ContentMode = contentPreview
 	m.ERDOffset = 0
+	// Prefer neighborhood of the selected sidebar table when available.
+	m.ERDFocusAll = false
 	schema := m.CurrentSchema
 	if schema == "" {
 		schema = "public"
@@ -1145,6 +1147,18 @@ func (m Model) keysERD(key string) (tea.Model, tea.Cmd) {
 		m.ERDOffset = 0
 	case "r":
 		return m.openERD()
+	case "a":
+		m.ERDFocusAll = true
+		m.ERDOffset = 0
+		m.StatusMsg = "ERD: all tables"
+	case "f":
+		if m.erdFocusCandidate() == "" {
+			m.StatusMsg = "Select a table to focus"
+			return m, nil
+		}
+		m.ERDFocusAll = false
+		m.ERDOffset = 0
+		m.StatusMsg = "ERD: focus " + m.erdFocusCandidate()
 	}
 	return m, nil
 }
