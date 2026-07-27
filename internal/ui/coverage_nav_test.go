@@ -1035,31 +1035,35 @@ func TestNav_CopyAndAfterObjectCursorMove(t *testing.T) {
 		}
 	}
 
-	// structure reload
+	// data/structure: cursor move returns to preview, does not auto-open
 	m.Screen = types.ScreenTableDetail
 	m.SelectedObjIdx = 0
 	nm, cmd = m.afterObjectCursorMove()
-	if cmd == nil {
-		t.Fatal("detail reload")
+	m = nm.(Model)
+	if cmd != nil || m.Screen != types.ScreenBrowser || m.Focus != focusSidebar {
+		t.Fatalf("detail cursor: screen=%v focus=%v cmd=%v", m.Screen, m.Focus, cmd != nil)
 	}
-	_ = nm
 
-	// data reload relation
 	m.Screen = types.ScreenTableData
+	m.SelectedObjIdx = 1
 	nm, cmd = m.afterObjectCursorMove()
-	if cmd == nil {
-		t.Fatal("data reload")
+	m = nm.(Model)
+	if cmd != nil || m.Screen != types.ScreenBrowser || m.Focus != focusSidebar {
+		t.Fatalf("data cursor: screen=%v focus=%v cmd=%v", m.Screen, m.Focus, cmd != nil)
+	}
+	if m.CurrentObject == nil || m.CurrentObject.Name != "users" {
+		t.Fatalf("data cursor object: %+v", m.CurrentObject)
 	}
 
-	// data screen + non-relation -> object detail
+	// data screen + non-relation still stays on preview (enter opens)
 	m.Objects = []types.SchemaObject{{Schema: "public", Name: "fn", Kind: types.ObjectFunction}}
 	m.SelectedObjIdx = 0
 	m.Screen = types.ScreenTableData
 	nm, cmd = m.afterObjectCursorMove()
-	if cmd == nil {
-		t.Fatal("data nonrel")
+	m = nm.(Model)
+	if cmd != nil || m.Screen != types.ScreenBrowser {
+		t.Fatalf("data nonrel: screen=%v cmd=%v", m.Screen, cmd != nil)
 	}
-	_ = nm
 
 	// default screen
 	m.Screen = types.ScreenConnections

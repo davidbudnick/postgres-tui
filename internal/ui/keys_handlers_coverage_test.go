@@ -1054,20 +1054,23 @@ func TestKH_AfterCursorAndObjectList(t *testing.T) {
 
 	m.Screen = types.ScreenTableDetail
 	nm, cmd := m.afterObjectCursorMove()
-	if cmd == nil {
-		t.Fatal("detail")
+	m = nm.(Model)
+	if cmd != nil || m.Screen != types.ScreenBrowser {
+		t.Fatalf("detail cursor should preview, screen=%v cmd=%v", m.Screen, cmd != nil)
 	}
 	m.Screen = types.ScreenTableData
 	nm, cmd = m.afterObjectCursorMove()
-	if cmd == nil {
-		t.Fatal("data")
+	m = nm.(Model)
+	if cmd != nil || m.Screen != types.ScreenBrowser {
+		t.Fatalf("data cursor should preview, screen=%v cmd=%v", m.Screen, cmd != nil)
 	}
 	m.Objects = []types.SchemaObject{{Schema: "public", Name: "fn", Kind: types.ObjectFunction}}
 	m.SelectedObjIdx = 0
 	m.Screen = types.ScreenTableData
 	nm, cmd = m.afterObjectCursorMove()
-	if cmd == nil {
-		t.Fatal("data nonrel")
+	m = nm.(Model)
+	if cmd != nil || m.Screen != types.ScreenBrowser {
+		t.Fatalf("data nonrel should preview, screen=%v cmd=%v", m.Screen, cmd != nil)
 	}
 	m.Screen = types.ScreenConnections
 	m.Objects = []types.SchemaObject{{Schema: "public", Name: "orders", Kind: types.ObjectTable}}
@@ -1203,7 +1206,14 @@ func TestKH_TableDataKeys(t *testing.T) {
 	m.Focus = focusSidebar
 	nm, _ = m.keysTableData("j")
 	m = nm.(Model)
+	// Sidebar j/k leaves data view for preview; restore grid for content keys.
+	m.Screen = types.ScreenTableData
 	m.Focus = focusContent
+	m.CurrentObject = &obj
+	m.TableData = types.QueryResult{
+		Columns: []string{"id", "name", "x"}, Rows: [][]string{{"1", "a", "x"}, {"2", "b", "y"}}, Truncated: true,
+	}
+	m.DataCursor, m.DataCol, m.DataOffset, m.PageSize = 0, 1, 0, 2
 	nm, _ = m.keysTableData("0")
 	m = nm.(Model)
 	nm, _ = m.keysTableData("$")
