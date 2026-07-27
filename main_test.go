@@ -39,11 +39,11 @@ func TestParsePort(t *testing.T) {
 }
 
 func TestIsSemver(t *testing.T) {
-	if !isSemver("v1.2.3") {
-		t.Fatal()
+	if !isSemver("v1.2.3") || !isSemver("1.2.3") {
+		t.Fatal("expected release tags to match")
 	}
-	if isSemver("dev") {
-		t.Fatal()
+	if isSemver("dev") || isSemver("v1.2.3-2-gabc") || isSemver("v1.2.3-dirty") {
+		t.Fatal("expected non-release forms to reject")
 	}
 }
 
