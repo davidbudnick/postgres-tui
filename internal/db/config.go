@@ -76,14 +76,8 @@ func (c *Config) load() error {
 }
 
 func (c *Config) save() error {
-	safeConnections := make([]types.Connection, len(c.Connections))
-	for i, conn := range c.Connections {
-		safeConnections[i] = conn
-		safeConnections[i].Password = ""
-	}
-
 	safeCfg := &Config{
-		Connections:   safeConnections,
+		Connections:   append([]types.Connection(nil), c.Connections...),
 		Groups:        c.Groups,
 		Favorites:     c.Favorites,
 		RecentObjects: c.RecentObjects,

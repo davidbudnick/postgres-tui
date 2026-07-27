@@ -171,7 +171,7 @@ That starts Postgres, seeds sample data, and launches the TUI with an **isolated
 | **Local Demo** | `demo` | Full seed data (tables, orders, analytics) |
 | **Analytics (RO)** | `postgres` | Read-only browse |
 
-Then: select **Local Demo** → `enter` → enter password `postgres` if prompted → browse tables → `enter` for data / `D` structure / `;` query (`ctrl+enter` to run).
+Then: select **Local Demo** → `e` edit → set password `postgres` → save → `enter` to connect → browse tables → `enter` for data / `D` structure / `;` query (`ctrl+enter` to run).
 
 ```bash
 # Or step by step (uses your normal config — empty until you add instances):

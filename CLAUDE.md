@@ -50,6 +50,6 @@ internal/
 ## Guardrails
 
 - All PostgreSQL operations go through `internal/pg/` — no raw pgx in UI/cmd
-- Password stripping on config save
+- Passwords persisted in config (mode 0600)
 - New commands go through `Commands` with injected services
 - Message types use `Msg` suffix in `types/messages.go`
