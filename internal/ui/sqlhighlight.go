@@ -208,31 +208,19 @@ func paintSegment(seg string, st lipgloss.Style, start, cursorCol int, cursorLin
 	runes := []rune(seg)
 	end := start + len(runes)
 	if cursorCol < start || cursorCol >= end {
-		if cursorLine {
-			return sqlCursorLineStyle.Foreground(st.GetForeground()).Render(seg)
-		}
-		return st.Render(seg)
+		return sqlCursorLineStyle.Foreground(st.GetForeground()).Render(seg)
 	}
-	// cursor inside segment
 	off := cursorCol - start
 	var b strings.Builder
 	if off > 0 {
 		left := string(runes[:off])
-		if cursorLine {
-			b.WriteString(sqlCursorLineStyle.Foreground(st.GetForeground()).Render(left))
-		} else {
-			b.WriteString(st.Render(left))
-		}
+		b.WriteString(sqlCursorLineStyle.Foreground(st.GetForeground()).Render(left))
 	}
 	cur := string(runes[off])
 	b.WriteString(sqlCursorStyle.Render(cur))
 	if off+1 < len(runes) {
 		right := string(runes[off+1:])
-		if cursorLine {
-			b.WriteString(sqlCursorLineStyle.Foreground(st.GetForeground()).Render(right))
-		} else {
-			b.WriteString(st.Render(right))
-		}
+		b.WriteString(sqlCursorLineStyle.Foreground(st.GetForeground()).Render(right))
 	}
 	return b.String()
 }
@@ -249,24 +237,16 @@ func (m Model) renderHighlightedSQLEditor(width, height int, focused bool) strin
 		lines = []string{""}
 	}
 
-	// Keep textarea metrics in sync for input handling.
 	lnW := 4
 	contentW := max(width-lnW-1, 10)
-	ta.SetWidth(contentW + lnW + 1) // include gutter so wrap math stays sane
+	ta.SetWidth(contentW + lnW + 1)
 	ta.SetHeight(height)
 	ta.ShowLineNumbers = false
 	ta.Prompt = ""
 
-	curLine := ta.Line()
+	curLine := clamp(ta.Line(), 0, len(lines)-1)
 	curCol := ta.Column()
-	if curLine < 0 {
-		curLine = 0
-	}
-	if curLine >= len(lines) {
-		curLine = len(lines) - 1
-	}
 
-	// Simple viewport around cursor
 	start := 0
 	if len(lines) > height {
 		start = curLine - height/2

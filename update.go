@@ -28,6 +28,8 @@ var (
 	ioCopy        = io.Copy
 	osOpenFile    = os.OpenFile
 	osCreateTemp  = os.CreateTemp
+	fileChmod     = func(f *os.File, mode os.FileMode) error { return f.Chmod(mode) }
+	fileClose     = func(f *os.File) error { return f.Close() }
 )
 
 const githubRepo = "davidbudnick/postgres-tui"
@@ -218,7 +220,7 @@ func verifyChecksum(archivePath, checksumPath, archiveName string) error {
 	}
 	defer f.Close()
 	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
+	if _, err := ioCopy(h, f); err != nil {
 		return err
 	}
 	got := hex.EncodeToString(h.Sum(nil))
@@ -253,11 +255,11 @@ func extractBinary(archivePath, destDir string) (string, error) {
 			continue
 		}
 		out := filepath.Join(destDir, base)
-		of, err := os.OpenFile(out, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o750)
+		of, err := osOpenFile(out, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o750)
 		if err != nil {
 			return "", err
 		}
-		if _, err := io.Copy(of, io.LimitReader(tr, maxBinarySize)); err != nil {
+		if _, err := ioCopy(of, io.LimitReader(tr, maxBinarySize)); err != nil {
 			of.Close()
 			return "", err
 		}
@@ -278,17 +280,17 @@ func installBinary(src, dest string) error {
 		return err
 	}
 	tmpName := tmp.Name()
-	if _, err := io.Copy(tmp, in); err != nil {
-		tmp.Close()
+	if _, err := ioCopy(tmp, in); err != nil {
+		_ = fileClose(tmp)
 		os.Remove(tmpName)
 		return err
 	}
-	if err := tmp.Chmod(0o755); err != nil {
-		tmp.Close()
+	if err := fileChmod(tmp, 0o755); err != nil {
+		_ = fileClose(tmp)
 		os.Remove(tmpName)
 		return err
 	}
-	if err := tmp.Close(); err != nil {
+	if err := fileClose(tmp); err != nil {
 		os.Remove(tmpName)
 		return err
 	}

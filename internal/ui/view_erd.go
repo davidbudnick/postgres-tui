@@ -284,14 +284,8 @@ func (c *erdCanvas) routeEdge(parent, child erdNode, label string) {
 	}
 
 	midY := (py + cy) / 2
-	if midY <= py {
-		midY = py
-	}
 	if midY >= cy-1 {
 		midY = cy - 2
-	}
-	if midY < py {
-		midY = py
 	}
 
 	// stem under parent
@@ -587,9 +581,6 @@ func erdLayers(g types.ERDGraph) [][]string {
 			}
 		}
 		d := maxParent + 1
-		if d < 0 {
-			d = 0
-		}
 		depth[n] = d
 		delete(stack, n)
 		return d

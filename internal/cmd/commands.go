@@ -250,10 +250,12 @@ func (c *Commands) ExportCSV(path string, result types.QueryResult) tea.Cmd {
 	}
 }
 
+var clipboardWrite = clipboard.WriteAll
+
 // CopyToClipboard copies text to the system clipboard.
 func (c *Commands) CopyToClipboard(text string) tea.Cmd {
 	return func() tea.Msg {
-		if err := clipboard.WriteAll(text); err != nil {
+		if err := clipboardWrite(text); err != nil {
 			return types.StatusMsg{Text: "clipboard: " + err.Error()}
 		}
 		return types.StatusMsg{Text: "Copied to clipboard"}

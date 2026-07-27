@@ -46,10 +46,9 @@ func (m Model) viewConnections() string {
 	sectionInner := w - 1
 	top := fmt.Sprintf("╭─ Saved Instances (%d) ", n)
 	if pad := sectionInner - len([]rune(top)); pad > 0 {
-		top += strings.Repeat("─", pad) + "╮"
-	} else {
-		top += "╮"
+		top += strings.Repeat("─", pad)
 	}
+	top += "╮"
 	bot := "╰" + strings.Repeat("─", sectionInner) + "╯"
 
 	b.WriteString(accentStyle.Render(top))

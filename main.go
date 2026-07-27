@@ -31,14 +31,20 @@ var (
 	runApp   = prodRunApp
 )
 
-var logFatalf = func(v ...any) { log.Fatal(v...) }
+func defaultLogFatalf(v ...any) {
+	log.Println(v...)
+	osExit(1)
+}
+
+var logFatalf = defaultLogFatalf
 
 func prodLogFatal(v ...any) { logFatalf(v...) }
 
-var newProgram = func(m ui.Model) teaProgram {
-	p := tea.NewProgram(m)
-	return p
+func defaultNewProgram(m ui.Model) teaProgram {
+	return tea.NewProgram(m)
 }
+
+var newProgram = defaultNewProgram
 
 type teaProgram interface {
 	Send(msg tea.Msg)

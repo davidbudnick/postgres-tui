@@ -18,6 +18,17 @@ const defaultTimeout = 30 * time.Second
 const maxCellBytes = 4096
 const maxQueryRows = 5000
 
+// testConfigurePool mutates pool config after ParseConfig (tests only).
+var testConfigurePool func(*pgxpool.Config)
+
+type scannable interface {
+	Scan(dest ...any) error
+}
+
+var scanRow = func(s scannable, dest ...any) error { return s.Scan(dest...) }
+var rowValues = func(r interface{ Values() ([]any, error) }) ([]any, error) { return r.Values() }
+var rowsErr = func(r interface{ Err() error }) error { return r.Err() }
+
 // Client is a PostgreSQL client backed by pgx.
 type Client struct {
 	mu       sync.RWMutex
@@ -63,6 +74,9 @@ func (c *Client) Connect(conn types.Connection) error {
 	cfg.MinConns = 0
 	cfg.MaxConnLifetime = 30 * time.Minute
 	cfg.HealthCheckPeriod = 30 * time.Second
+	if testConfigurePool != nil {
+		testConfigurePool(cfg)
+	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
 	defer cancel()
@@ -135,7 +149,6 @@ func (c *Client) SwitchDatabase(name string) error {
 	conn := c.conn
 	cur := c.database
 	c.mu.RUnlock()
-	// Already on this database — avoid closing the live pool.
 	if name != "" && name == cur {
 		return nil
 	}
@@ -217,12 +230,12 @@ ORDER BY d.datname`)
 	var out []types.DatabaseInfo
 	for rows.Next() {
 		var db types.DatabaseInfo
-		if err := rows.Scan(&db.Name, &db.Owner, &db.Encoding, &db.Collate, &db.SizeBytes, &db.SizePretty, &db.ConnLimit, &db.AllowConn); err != nil {
+		if err := scanRow(rows, &db.Name, &db.Owner, &db.Encoding, &db.Collate, &db.SizeBytes, &db.SizePretty, &db.ConnLimit, &db.AllowConn); err != nil {
 			return nil, err
 		}
 		out = append(out, db)
 	}
-	return out, rows.Err()
+	return out, rowsErr(rows)
 }
 
 // ListSchemas lists non-system schemas.
@@ -252,12 +265,12 @@ ORDER BY n.nspname`)
 	var out []types.SchemaInfo
 	for rows.Next() {
 		var s types.SchemaInfo
-		if err := rows.Scan(&s.Name, &s.Owner, &s.TableCount, &s.ViewCount); err != nil {
+		if err := scanRow(rows, &s.Name, &s.Owner, &s.TableCount, &s.ViewCount); err != nil {
 			return nil, err
 		}
 		out = append(out, s)
 	}
-	return out, rows.Err()
+	return out, rowsErr(rows)
 }
 
 // ListObjects lists objects of a given kind in a schema (empty schema = all user schemas).
@@ -287,14 +300,11 @@ func (c *Client) ListObjects(schema string, kind types.ObjectKind) ([]types.Sche
 
 func (c *Client) listRelations(ctx context.Context, pool *pgxpool.Pool, schema string, kind types.ObjectKind) ([]types.SchemaObject, error) {
 	relkinds := []string{"r", "p"}
-	objKind := types.ObjectTable
 	switch kind {
 	case types.ObjectView:
 		relkinds = []string{"v"}
-		objKind = types.ObjectView
 	case types.ObjectMatView:
 		relkinds = []string{"m"}
-		objKind = types.ObjectMatView
 	case "":
 		relkinds = []string{"r", "p", "v", "m"}
 	}
@@ -337,7 +347,7 @@ ORDER BY n.nspname, c.relname`, strings.Join(placeholders, ","), schemaFilter)
 	for rows.Next() {
 		var o types.SchemaObject
 		var relkind string
-		if err := rows.Scan(&o.Schema, &o.Name, &relkind, &o.Owner, &o.RowEstimate, &o.SizePretty, &o.SizeBytes, &o.Comment); err != nil {
+		if err := scanRow(rows, &o.Schema, &o.Name, &relkind, &o.Owner, &o.RowEstimate, &o.SizePretty, &o.SizeBytes, &o.Comment); err != nil {
 			return nil, err
 		}
 		switch relkind {
@@ -346,14 +356,11 @@ ORDER BY n.nspname, c.relname`, strings.Join(placeholders, ","), schemaFilter)
 		case "m":
 			o.Kind = types.ObjectMatView
 		default:
-			o.Kind = objKind
-			if o.Kind == "" {
-				o.Kind = types.ObjectTable
-			}
+			o.Kind = types.ObjectTable
 		}
 		out = append(out, o)
 	}
-	return out, rows.Err()
+	return out, rowsErr(rows)
 }
 
 func (c *Client) listSequences(ctx context.Context, pool *pgxpool.Pool, schema string) ([]types.SchemaObject, error) {
@@ -380,12 +387,12 @@ ORDER BY n.nspname, c.relname`
 	for rows.Next() {
 		var o types.SchemaObject
 		o.Kind = types.ObjectSequence
-		if err := rows.Scan(&o.Schema, &o.Name, &o.Owner, &o.SizePretty, &o.SizeBytes); err != nil {
+		if err := scanRow(rows, &o.Schema, &o.Name, &o.Owner, &o.SizePretty, &o.SizeBytes); err != nil {
 			return nil, err
 		}
 		out = append(out, o)
 	}
-	return out, rows.Err()
+	return out, rowsErr(rows)
 }
 
 func (c *Client) listFunctions(ctx context.Context, pool *pgxpool.Pool, schema string) ([]types.SchemaObject, error) {
@@ -413,7 +420,7 @@ LIMIT 500`
 		var o types.SchemaObject
 		var argsStr string
 		o.Kind = types.ObjectFunction
-		if err := rows.Scan(&o.Schema, &o.Name, &o.Owner, &argsStr); err != nil {
+		if err := scanRow(rows, &o.Schema, &o.Name, &o.Owner, &argsStr); err != nil {
 			return nil, err
 		}
 		if argsStr != "" {
@@ -421,7 +428,7 @@ LIMIT 500`
 		}
 		out = append(out, o)
 	}
-	return out, rows.Err()
+	return out, rowsErr(rows)
 }
 
 func (c *Client) listTypes(ctx context.Context, pool *pgxpool.Pool, schema string) ([]types.SchemaObject, error) {
@@ -447,12 +454,12 @@ ORDER BY n.nspname, t.typname`
 	for rows.Next() {
 		var o types.SchemaObject
 		o.Kind = types.ObjectType
-		if err := rows.Scan(&o.Schema, &o.Name, &o.Owner); err != nil {
+		if err := scanRow(rows, &o.Schema, &o.Name, &o.Owner); err != nil {
 			return nil, err
 		}
 		out = append(out, o)
 	}
-	return out, rows.Err()
+	return out, rowsErr(rows)
 }
 
 func (c *Client) listExtensionsAsObjects(ctx context.Context, pool *pgxpool.Pool) ([]types.SchemaObject, error) {
@@ -469,13 +476,13 @@ ORDER BY e.extname`)
 		var o types.SchemaObject
 		var ver string
 		o.Kind = types.ObjectExtension
-		if err := rows.Scan(&o.Name, &ver, &o.Schema); err != nil {
+		if err := scanRow(rows, &o.Name, &ver, &o.Schema); err != nil {
 			return nil, err
 		}
 		o.Comment = ver
 		out = append(out, o)
 	}
-	return out, rows.Err()
+	return out, rowsErr(rows)
 }
 
 // GetTableDetail loads columns, indexes, and constraints for a table/view.
@@ -543,12 +550,12 @@ ORDER BY a.attnum`, schema, name)
 	defer colRows.Close()
 	for colRows.Next() {
 		var col types.ColumnInfo
-		if err := colRows.Scan(&col.Name, &col.DataType, &col.UDTName, &col.IsNullable, &col.Default, &col.Comment, &col.Position, &col.IsPrimaryKey); err != nil {
+		if err := scanRow(colRows, &col.Name, &col.DataType, &col.UDTName, &col.IsNullable, &col.Default, &col.Comment, &col.Position, &col.IsPrimaryKey); err != nil {
 			return types.TableDetail{}, err
 		}
 		detail.Columns = append(detail.Columns, col)
 	}
-	if err := colRows.Err(); err != nil {
+	if err := rowsErr(colRows); err != nil {
 		return types.TableDetail{}, err
 	}
 
@@ -571,12 +578,12 @@ ORDER BY i.relname`, schema, name)
 	defer idxRows.Close()
 	for idxRows.Next() {
 		var idx types.IndexInfo
-		if err := idxRows.Scan(&idx.Name, &idx.Definition, &idx.IsUnique, &idx.IsPrimary, &idx.SizePretty); err != nil {
+		if err := scanRow(idxRows, &idx.Name, &idx.Definition, &idx.IsUnique, &idx.IsPrimary, &idx.SizePretty); err != nil {
 			return types.TableDetail{}, err
 		}
 		detail.Indexes = append(detail.Indexes, idx)
 	}
-	if err := idxRows.Err(); err != nil {
+	if err := rowsErr(idxRows); err != nil {
 		return types.TableDetail{}, err
 	}
 
@@ -597,17 +604,16 @@ ORDER BY con.conname`, schema, name)
 	for conRows.Next() {
 		var ct types.ConstraintInfo
 		var code string
-		if err := conRows.Scan(&ct.Name, &code, &ct.Definition); err != nil {
+		if err := scanRow(conRows, &ct.Name, &code, &ct.Definition); err != nil {
 			return types.TableDetail{}, err
 		}
 		ct.Type = constraintTypeName(code)
 		detail.Constraints = append(detail.Constraints, ct)
 	}
-	if err := conRows.Err(); err != nil {
+	if err := rowsErr(conRows); err != nil {
 		return types.TableDetail{}, err
 	}
 
-	// View / matview definition for Structure → Definition tab.
 	if kind == types.ObjectView || kind == types.ObjectMatView {
 		var def string
 		err = pool.QueryRow(ctx, `
@@ -670,12 +676,8 @@ WHERE schemaname = $1 AND sequencename = $2`, schema, name).Scan(
 		}
 		return types.TableDetail{}, fmt.Errorf("sequence: %w", err)
 	}
-	// is_called via last_value path — pg_sequences has no is_called in all versions; optional.
 	_ = called
 	addProp := func(k string, v any) {
-		if v == nil {
-			return
-		}
 		switch t := v.(type) {
 		case *int64:
 			if t != nil {
@@ -712,7 +714,6 @@ func (c *Client) getFunctionDetail(schema, name string) (types.TableDetail, erro
 	detail := types.TableDetail{
 		Object: types.SchemaObject{Schema: schema, Name: name, Kind: types.ObjectFunction},
 	}
-	// Prefer the first overload; list args + language + return type.
 	var oid uint32
 	var lang, ret, identity string
 	err = pool.QueryRow(ctx, `
@@ -774,9 +775,6 @@ WHERE n.nspname = $1 AND t.typname = $2
 		return types.TableDetail{}, fmt.Errorf("type: %w", err)
 	}
 	typeName := map[string]string{"c": "composite", "e": "enum", "d": "domain", "r": "range", "m": "multirange"}[typType]
-	if typeName == "" {
-		typeName = typType
-	}
 	detail.Props = []types.DetailProp{
 		{Label: "type", Value: typeName},
 		{Label: "category", Value: typCategory},
@@ -785,7 +783,6 @@ WHERE n.nspname = $1 AND t.typname = $2
 	if enumLabels != "" {
 		detail.Props = append(detail.Props, types.DetailProp{Label: "labels", Value: enumLabels})
 	}
-	// Composite attributes as columns for structure browsing.
 	if typType == "c" {
 		rows, qerr := pool.Query(ctx, `
 SELECT a.attname,
@@ -808,7 +805,7 @@ ORDER BY a.attnum`, schema, name)
 			defer rows.Close()
 			for rows.Next() {
 				var col types.ColumnInfo
-				if err := rows.Scan(&col.Name, &col.DataType, &col.UDTName, &col.IsNullable, &col.Default, &col.Comment, &col.Position, &col.IsPrimaryKey); err != nil {
+				if err := scanRow(rows, &col.Name, &col.DataType, &col.UDTName, &col.IsNullable, &col.Default, &col.Comment, &col.Position, &col.IsPrimaryKey); err != nil {
 					break
 				}
 				detail.Columns = append(detail.Columns, col)
@@ -900,7 +897,6 @@ func (c *Client) RunQuery(sql string, limit int) (types.QueryResult, error) {
 		return types.QueryResult{}, fmt.Errorf("empty query")
 	}
 
-	// Block writes in read-only mode (simple keyword check).
 	if c.IsReadOnly() && isMutatingSQL(trimmed) {
 		return types.QueryResult{}, fmt.Errorf("read-only mode: write statements are blocked")
 	}
@@ -921,7 +917,6 @@ func (c *Client) RunQuery(sql string, limit int) (types.QueryResult, error) {
 		return result, nil
 	}
 
-	// Cap SELECT results.
 	execSQL := trimmed
 	if !hasLimitClause(trimmed) {
 		execSQL = fmt.Sprintf("SELECT * FROM (%s) AS _pg_tui_q LIMIT %d", trimmed, limit+1)
@@ -941,7 +936,7 @@ func (c *Client) RunQuery(sql string, limit int) (types.QueryResult, error) {
 	}
 
 	for rows.Next() {
-		vals, err := rows.Values()
+		vals, err := rowValues(rows)
 		if err != nil {
 			result.Duration = time.Since(start)
 			return result, err
@@ -959,7 +954,7 @@ func (c *Client) RunQuery(sql string, limit int) (types.QueryResult, error) {
 	}
 	result.Duration = time.Since(start)
 	result.RowsAffected = int64(len(result.Rows))
-	return result, rows.Err()
+	return result, rowsErr(rows)
 }
 
 // ListActivity returns current client backends (excludes background workers).
@@ -1004,7 +999,7 @@ LIMIT 200`)
 	for rows.Next() {
 		var a types.ActivityRow
 		var queryStart *time.Time
-		if err := rows.Scan(&a.PID, &a.User, &a.Database, &a.State, &a.Query, &a.WaitEvent, &a.WaitEventType,
+		if err := scanRow(rows, &a.PID, &a.User, &a.Database, &a.State, &a.Query, &a.WaitEvent, &a.WaitEventType,
 			&a.BackendStart, &queryStart, &a.ApplicationName, &a.ClientAddr, &a.BackendType); err != nil {
 			return nil, err
 		}
@@ -1014,7 +1009,7 @@ LIMIT 200`)
 		}
 		out = append(out, a)
 	}
-	return out, rows.Err()
+	return out, rowsErr(rows)
 }
 
 // ListERD loads tables and foreign-key edges for a schema ER diagram.
@@ -1049,7 +1044,7 @@ ORDER BY c.relname, a.attnum`, schema)
 	var order []string
 	for tblRows.Next() {
 		var name, col string
-		if err := tblRows.Scan(&name, &col); err != nil {
+		if err := scanRow(tblRows, &name, &col); err != nil {
 			return types.ERDGraph{}, err
 		}
 		t, ok := byName[name]
@@ -1060,7 +1055,7 @@ ORDER BY c.relname, a.attnum`, schema)
 		}
 		t.Columns = append(t.Columns, col)
 	}
-	if err := tblRows.Err(); err != nil {
+	if err := rowsErr(tblRows); err != nil {
 		return types.ERDGraph{}, err
 	}
 	for _, name := range order {
@@ -1091,12 +1086,12 @@ ORDER BY src.relname, con.conname`, schema)
 
 	for edgeRows.Next() {
 		var e types.FKEdge
-		if err := edgeRows.Scan(&e.Name, &e.FromTable, &e.ToTable, &e.FromCols, &e.ToCols); err != nil {
+		if err := scanRow(edgeRows, &e.Name, &e.FromTable, &e.ToTable, &e.FromCols, &e.ToCols); err != nil {
 			return types.ERDGraph{}, err
 		}
 		graph.Edges = append(graph.Edges, e)
 	}
-	return graph, edgeRows.Err()
+	return graph, rowsErr(edgeRows)
 }
 
 // ListExtensions returns installed extensions.
@@ -1119,12 +1114,12 @@ ORDER BY e.extname`)
 	var out []types.ExtensionInfo
 	for rows.Next() {
 		var e types.ExtensionInfo
-		if err := rows.Scan(&e.Name, &e.Version, &e.Schema); err != nil {
+		if err := scanRow(rows, &e.Name, &e.Version, &e.Schema); err != nil {
 			return nil, err
 		}
 		out = append(out, e)
 	}
-	return out, rows.Err()
+	return out, rowsErr(rows)
 }
 
 // CancelQuery cancels a backend by PID.
@@ -1208,10 +1203,8 @@ func isMutatingSQL(sql string) bool {
 }
 
 func hasLimitClause(sql string) bool {
-	// crude: avoid double-wrapping if user already limited
 	upper := strings.ToUpper(sql)
 	return strings.Contains(upper, " LIMIT ")
 }
 
-// Ensure unused import of pgx for compile when only pool is used.
 var _ = pgx.Identifier{}

@@ -8,6 +8,8 @@ import (
 	"github.com/davidbudnick/postgres-tui/internal/types"
 )
 
+var keyMsgString = func(msg tea.KeyPressMsg) string { return msg.String() }
+
 func normalizeKey(msg tea.KeyPressMsg) string {
 	// Tab chords must win over Text/String quirks across terminals.
 	if msg.Code == tea.KeyTab {
@@ -16,7 +18,7 @@ func normalizeKey(msg tea.KeyPressMsg) string {
 		}
 		return "tab"
 	}
-	s := msg.String()
+	s := keyMsgString(msg)
 	if s == "backtab" || s == "shift+tab" {
 		return "shift+tab"
 	}
@@ -27,9 +29,6 @@ func normalizeKey(msg tea.KeyPressMsg) string {
 	}
 	if t := msg.Text; t != "" && t != " " {
 		return t
-	}
-	if s == "" {
-		return s
 	}
 	if strings.HasPrefix(s, "shift+") {
 		rest := strings.TrimPrefix(s, "shift+")

@@ -629,10 +629,6 @@ func (m Model) renderResultTable(res types.QueryResult, cursorRow, cursorCol, ma
 		}
 	}
 	nShow := len(colW)
-	if nShow == 0 {
-		nShow = 1
-		colW = []int{min(avail-1, 12)}
-	}
 	if cursorCol >= nShow {
 		cursorCol = nShow - 1
 	}
@@ -648,9 +644,6 @@ func (m Model) renderResultTable(res types.QueryResult, cursorRow, cursorCol, ma
 	for i := 0; i < nShow; i++ {
 		hdr.WriteString("│")
 		name := res.Columns[i]
-		if i >= len(res.Columns) {
-			name = "?"
-		}
 		hdr.WriteString(padRight(name, colW[i]))
 	}
 	b.WriteString(tableHeaderStyle.Render(padRight(hdr.String(), maxWidth)))

@@ -181,10 +181,10 @@ func (c *sqlCompleter) Rebuild(objs []types.SchemaObject, cols map[string][]stri
 			bare = qual[i+1:]
 		}
 		for _, col := range list {
+			add(&columns, seenC, col)
 			if col == "" {
 				continue
 			}
-			add(&columns, seenC, col)
 			add(&qualified, seenQ, bare+"."+col)
 			if bare != qual {
 				add(&qualified, seenQ, qual+"."+col)

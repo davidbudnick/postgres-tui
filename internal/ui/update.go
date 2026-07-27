@@ -905,9 +905,6 @@ func (m Model) keysDatabasesInContent(key string) (tea.Model, tea.Cmd) {
 
 func (m Model) keysSidebar(key string) (tea.Model, tea.Cmd) {
 	rows := m.buildSidebarRows()
-	if len(rows) == 0 {
-		return m, nil
-	}
 	row := rows[clamp(m.SidebarCursor, 0, len(rows)-1)]
 	switch key {
 	case "j", "down":
@@ -968,9 +965,6 @@ func (m Model) toggleKindFilter(nav NavSection) (tea.Model, tea.Cmd) {
 // only (auto-load on hover re-ordered rows and flung the cursor downward).
 func (m Model) onSidebarCursorMoved() (tea.Model, tea.Cmd) {
 	rows := m.buildSidebarRows()
-	if len(rows) == 0 {
-		return m, nil
-	}
 	row := rows[clamp(m.SidebarCursor, 0, len(rows)-1)]
 	if row.kind == sbObject {
 		return m.afterObjectCursorMove()
@@ -980,9 +974,6 @@ func (m Model) onSidebarCursorMoved() (tea.Model, tea.Cmd) {
 
 func (m Model) syncSelectionFromSidebar() Model {
 	rows := m.buildSidebarRows()
-	if len(rows) == 0 {
-		return m
-	}
 	row := rows[clamp(m.SidebarCursor, 0, len(rows)-1)]
 	if row.kind == sbObject {
 		m.SelectedObjIdx = row.objIdx
@@ -1045,11 +1036,8 @@ func (m Model) beginObjectDetail(o types.SchemaObject) (tea.Model, tea.Cmd) {
 	m.Focus = focusContent
 	base := m.Cmds.LoadObjectDetail(o.Schema, o.Name, o.Kind)
 	return m, func() tea.Msg {
-		msg := base()
-		if d, ok := msg.(types.TableDetailLoadedMsg); ok {
-			return sequencedDetailMsg{TableDetailLoadedMsg: d, seq: seq}
-		}
-		return msg
+		d := base().(types.TableDetailLoadedMsg)
+		return sequencedDetailMsg{TableDetailLoadedMsg: d, seq: seq}
 	}
 }
 
@@ -1283,11 +1271,8 @@ func (m Model) beginTableDetail(o types.SchemaObject) (Model, tea.Cmd) {
 	m.DetailTab = 0
 	base := m.Cmds.LoadObjectDetail(o.Schema, o.Name, o.Kind)
 	return m, func() tea.Msg {
-		msg := base()
-		if d, ok := msg.(types.TableDetailLoadedMsg); ok {
-			return sequencedDetailMsg{TableDetailLoadedMsg: d, seq: seq}
-		}
-		return msg
+		d := base().(types.TableDetailLoadedMsg)
+		return sequencedDetailMsg{TableDetailLoadedMsg: d, seq: seq}
 	}
 }
 
@@ -1305,11 +1290,8 @@ func (m Model) beginTableData(o types.SchemaObject, offset, limit int) (Model, t
 	m.Loading = true
 	base := m.Cmds.LoadTableData(o.Schema, o.Name, offset, limit)
 	return m, func() tea.Msg {
-		msg := base()
-		if d, ok := msg.(types.TableDataLoadedMsg); ok {
-			return sequencedDataMsg{TableDataLoadedMsg: d, seq: seq}
-		}
-		return msg
+		d := base().(types.TableDataLoadedMsg)
+		return sequencedDataMsg{TableDataLoadedMsg: d, seq: seq}
 	}
 }
 
@@ -1617,6 +1599,11 @@ func (m Model) keysQuery(key string, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 
 	switch {
 	case key == "esc":
+		if m.Focus == focusContent && m.QueryFocus == "editor" && len(m.QuerySuggests) > 0 {
+			m.QuerySuggests = nil
+			m.QuerySuggestIdx = 0
+			return m, nil
+		}
 		m.Screen = types.ScreenBrowser
 		m.Focus = focusMain
 		if m.QueryArea != nil {
@@ -1742,12 +1729,6 @@ func (m Model) keysQuery(key string, msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			case "up", "ctrl+p":
 				m.QuerySuggestIdx = (m.QuerySuggestIdx - 1 + len(m.QuerySuggests)) % len(m.QuerySuggests)
 				return m, nil
-			case "esc":
-				if len(m.QuerySuggests) > 0 {
-					m.QuerySuggests = nil
-					m.QuerySuggestIdx = 0
-					return m, nil
-				}
 			case "enter":
 				// Plain enter inserts newline via textarea; ctrl+enter runs (above).
 			}

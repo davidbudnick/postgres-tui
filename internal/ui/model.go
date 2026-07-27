@@ -547,15 +547,17 @@ func (m Model) syncSidebarCursorToObject() Model {
 }
 
 // pinSidebarCursorToKind keeps the cursor on a specific FILTERS checkbox row.
+var sidebarRowsFor = func(m Model) []sidebarRow { return m.buildSidebarRows() }
+
 func (m Model) pinSidebarCursorToKind(nav NavSection) Model {
-	for i, r := range m.buildSidebarRows() {
+	for i, r := range sidebarRowsFor(m) {
 		if r.kind == sbKind && r.nav == nav {
 			m.SidebarCursor = i
 			return m
 		}
 	}
 	// Fallback: first kind row
-	for i, r := range m.buildSidebarRows() {
+	for i, r := range sidebarRowsFor(m) {
 		if r.kind == sbKind {
 			m.SidebarCursor = i
 			return m
@@ -588,7 +590,7 @@ func (m Model) pinSidebarCursorToSchema(schemaIdx int) Model {
 
 // pinSidebarAfterObjectsLoad restores cursor after async LoadObjects.
 func (m Model) pinSidebarAfterObjectsLoad() Model {
-	rows := m.buildSidebarRows()
+	rows := sidebarRowsFor(m)
 	if len(rows) == 0 {
 		return m
 	}
