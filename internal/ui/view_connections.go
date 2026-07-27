@@ -127,8 +127,8 @@ func (m Model) buildStatsBar() string {
 		{"Instances", fmt.Sprintf("%d saved", len(m.Connections)), colorAccent},
 		{"Time", time.Now().Format("15:04:05"), "245"},
 	}
-	if m.Version != "" && m.Version != "dev" {
-		boxes = append(boxes, struct{ label, value, color string }{"Version", m.Version, colorPGBlueHi})
+	if ver := displayAppVersion(m.Version); ver != "" {
+		boxes = append(boxes, struct{ label, value, color string }{"Version", ver, colorPGBlueHi})
 	}
 
 	var statsBoxes []string
@@ -137,9 +137,51 @@ func (m Model) buildStatsBar() string {
 			dimStyle.Render(box.label),
 			lipgloss.NewStyle().Foreground(lipgloss.Color(box.color)).Bold(true).Render(box.value),
 		)
-		statsBoxes = append(statsBoxes, statsBoxStyle.Width(16).Render(content))
+		// Fixed width must fit value on one line (no wrap).
+		w := max(14, len(box.value)+4)
+		statsBoxes = append(statsBoxes, statsBoxStyle.Width(w).Render(content))
 	}
 	return lipgloss.JoinHorizontal(lipgloss.Top, statsBoxes...)
+}
+
+// displayAppVersion returns a compact home-card version, or empty to hide.
+func displayAppVersion(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" || v == "dev" {
+		return ""
+	}
+	// git describe: v0.0.2-2-g3a8997a[-dirty] → 0.0.2*
+	if i := strings.Index(v, "-g"); i >= 0 {
+		base := v[:i]
+		if j := strings.LastIndex(base, "-"); j > 0 {
+			suf := base[j+1:]
+			digits := suf != ""
+			for _, c := range suf {
+				if c < '0' || c > '9' {
+					digits = false
+					break
+				}
+			}
+			if digits {
+				base = base[:j]
+			}
+		}
+		base = strings.TrimPrefix(base, "v")
+		if base == "" || !strings.Contains(base, ".") {
+			return "dev"
+		}
+		return base + "*"
+	}
+	dirty := strings.HasSuffix(v, "-dirty")
+	v = strings.TrimSuffix(v, "-dirty")
+	v = strings.TrimPrefix(v, "v")
+	if v == "" || !strings.ContainsAny(v, ".") {
+		return "dev"
+	}
+	if dirty {
+		return v + "*"
+	}
+	return v
 }
 
 func (m Model) renderConnectionCard(conn types.Connection, selected bool, width int) string {

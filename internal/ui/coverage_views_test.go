@@ -69,6 +69,10 @@ func TestAllScreenViews(t *testing.T) {
 	_ = m.buildStatsBar()
 	m.Version = "dev"
 	_ = m.buildStatsBar()
+	m.Version = "v0.0.2-2-g3a8997a"
+	_ = m.buildStatsBar()
+	m.Version = "v1.2.3"
+	_ = m.buildStatsBar()
 	_ = m.renderConnectionCard(m.Connections[0], true, 40)
 	_ = m.renderConnectionCard(m.Connections[1], false, 20)
 
