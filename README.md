@@ -1,5 +1,8 @@
 # PostgreSQL TUI Manager
 
+[![CI](https://github.com/davidbudnick/postgres-tui/actions/workflows/ci.yml/badge.svg)](https://github.com/davidbudnick/postgres-tui/actions/workflows/ci.yml)
+[![Release](https://github.com/davidbudnick/postgres-tui/actions/workflows/release.yml/badge.svg)](https://github.com/davidbudnick/postgres-tui/actions/workflows/release.yml)
+[![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/davidbudnick/postgres-tui/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A fast, keyboard-first terminal UI for PostgreSQL — built with Go and [Bubble Tea](https://github.com/charmbracelet/bubbletea). Sibling to [redis-tui](https://github.com/davidbudnick/redis-tui) and [es-tui](https://github.com/davidbudnick/es-tui).
