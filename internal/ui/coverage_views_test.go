@@ -466,8 +466,8 @@ func TestViewBranchesRemaining(t *testing.T) {
 	c.put(2, 2, '│', 1)
 	parent := erdNode{x: 1, y: 1, w: 8, h: 4, name: "p", table: types.ERDTable{Name: "p", Columns: []string{"id"}}}
 	child := erdNode{x: 1, y: 7, w: 8, h: 3, name: "c", table: types.ERDTable{Name: "c", Columns: []string{"id"}}}
-	c.drawBox(parent, nil)
-	c.drawBox(child, map[string]bool{"c.id": true})
+	c.drawBox(parent, nil, false)
+	c.drawBox(child, map[string]bool{"c.id": true}, false)
 	c.routeEdge(parent, child, "fk", 0)
 	c.routeEdge(parent, erdNode{x: 1, y: 2, w: 4, h: 2}, "early", 0)
 	_ = c.lines()

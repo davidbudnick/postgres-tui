@@ -512,8 +512,8 @@ func TestCoverageViewEdgeCases(t *testing.T) {
 	// same x center → straight down
 	childStraight := erdNode{x: 4, y: 8, w: 8, h: 3, name: "c", table: types.ERDTable{Name: "c", Columns: []string{"id"}}}
 	c2 := newERDCanvas(20, 14)
-	c2.drawBox(parent, nil)
-	c2.drawBox(childStraight, nil)
+	c2.drawBox(parent, nil, false)
+	c2.drawBox(childStraight, nil, false)
 	c2.routeEdge(parent, childStraight, "fk", 0)
 	// early exit: child too close
 	c2.routeEdge(parent, erdNode{x: 4, y: 3, w: 4, h: 2}, "early", 0)
@@ -553,10 +553,10 @@ func TestCoverageViewEdgeCases(t *testing.T) {
 		"z", 0)
 
 	// renderERDDiagram: empty, isolated, empty cols, missing edge ends, reverse layer edge
-	_ = renderERDDiagram(types.ERDGraph{}, 80)
+	_ = renderERDDiagram(types.ERDGraph{}, 80, "")
 	_ = renderERDDiagram(types.ERDGraph{
 		Tables: []types.ERDTable{{Name: "solo", Columns: nil}, {Name: "wide", Columns: []string{"id", "a", "b", "c", "d", "e", "f"}}},
-	}, 80)
+	}, 80, "")
 	// max tables → list mode via viewERDContent
 	m.Screen = types.ScreenERD
 	m.Loading = true
@@ -602,8 +602,8 @@ func TestCoverageViewEdgeCases(t *testing.T) {
 			{FromTable: "ghost", FromCols: []string{"id"}, ToTable: "users", ToCols: []string{"id"}},
 		},
 	}
-	_ = renderERDDiagram(g, 100)
-	_ = renderERDDiagram(g, 40)
+	_ = renderERDDiagram(g, 100, "")
+	_ = renderERDDiagram(g, 40, "")
 	_ = renderERDList(g, 5, true)
 	_ = renderERDList(types.ERDGraph{Tables: g.Tables}, 40, true) // no edges
 
@@ -673,8 +673,8 @@ func TestCoverageViewEdgeCases(t *testing.T) {
 			{FromTable: "b1", FromCols: []string{"a_id"}, ToTable: "a1", ToCols: []string{"id"}},
 		},
 	}
-	_ = renderERDDiagram(wideG, 30)
-	_ = renderERDDiagram(wideG, 120)
+	_ = renderERDDiagram(wideG, 30, "")
+	_ = renderERDDiagram(wideG, 120, "")
 
 	m.ERD = g
 	m.CurrentSchema = ""

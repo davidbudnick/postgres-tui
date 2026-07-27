@@ -305,13 +305,13 @@ func TestConnectionsFramePadAndERDResidual(t *testing.T) {
 	}
 	_ = erdBarycenterOrder(g2, erdLayers(g2))
 	// render diagram maxX expand
-	_ = renderERDDiagram(g2, 20)
+	_ = renderERDDiagram(g2, 20, "")
 	// edge missing node
 	g3 := types.ERDGraph{
 		Tables: []types.ERDTable{{Name: "only", Columns: []string{"id"}}},
 		Edges:  []types.FKEdge{{FromTable: "only", ToTable: "nope", FromCols: []string{"id"}, ToCols: []string{"id"}}},
 	}
-	_ = renderERDDiagram(g3, 40)
+	_ = renderERDDiagram(g3, 40, "")
 }
 
 func TestSidebarAndHeaderResidual(t *testing.T) {

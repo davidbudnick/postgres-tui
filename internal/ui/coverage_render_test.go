@@ -547,7 +547,7 @@ func TestCoverageRenderActivityERDServer(t *testing.T) {
 		},
 		Edges: []types.FKEdge{{FromTable: "b", FromCols: []string{"a_id"}, ToTable: "a", ToCols: []string{"id"}}},
 	}
-	_ = renderERDDiagram(g, 100)
+	_ = renderERDDiagram(g, 100, "")
 	_ = erdFindTable(g, "missing")
 	_ = erdFindTable(g, "a")
 	_ = orderERDColumns("a", []string{"x", "id", "z"}, map[string]bool{"a.z": true}, false)

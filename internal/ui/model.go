@@ -150,8 +150,9 @@ type Model struct {
 	Activity       []types.ActivityRow
 	SelectedActIdx int
 
-	ERD       types.ERDGraph
-	ERDOffset int
+	ERD         types.ERDGraph
+	ERDOffset   int
+	ERDFocusAll bool // when true, show full schema; otherwise focus selected table
 
 	Favorites      []types.Favorite
 	SelectedFavIdx int
