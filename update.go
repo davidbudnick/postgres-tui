@@ -189,7 +189,7 @@ func downloadFile(url, dest string) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("%s: %s", url, resp.Status)
 	}
-	f, err := os.Create(dest)
+	f, err := os.Create(dest) // #nosec G304 -- dest is a temp path we created
 	if err != nil {
 		return err
 	}
@@ -199,7 +199,7 @@ func downloadFile(url, dest string) error {
 }
 
 func verifyChecksum(archivePath, checksumPath, archiveName string) error {
-	data, err := os.ReadFile(checksumPath)
+	data, err := os.ReadFile(checksumPath) // #nosec G304 -- checksumPath is a temp download we wrote
 	if err != nil {
 		return err
 	}
@@ -214,7 +214,7 @@ func verifyChecksum(archivePath, checksumPath, archiveName string) error {
 	if want == "" {
 		return fmt.Errorf("checksum not found for %s", archiveName)
 	}
-	f, err := os.Open(archivePath)
+	f, err := os.Open(archivePath) // #nosec G304 -- archivePath is a verified temp download
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func verifyChecksum(archivePath, checksumPath, archiveName string) error {
 }
 
 func extractBinary(archivePath, destDir string) (string, error) {
-	f, err := os.Open(archivePath)
+	f, err := os.Open(archivePath) // #nosec G304 -- archivePath is a verified temp download
 	if err != nil {
 		return "", err
 	}
@@ -255,22 +255,24 @@ func extractBinary(archivePath, destDir string) (string, error) {
 			continue
 		}
 		out := filepath.Join(destDir, base)
-		of, err := osOpenFile(out, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o750)
+		of, err := osOpenFile(out, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0o750) // #nosec G302 G304
 		if err != nil {
 			return "", err
 		}
 		if _, err := ioCopy(of, io.LimitReader(tr, maxBinarySize)); err != nil {
-			of.Close()
+			_ = of.Close() // #nosec G104 -- best-effort close on write error
 			return "", err
 		}
-		of.Close()
+		if err := of.Close(); err != nil {
+			return "", err
+		}
 		return out, nil
 	}
 	return "", fmt.Errorf("binary not found in archive")
 }
 
 func installBinary(src, dest string) error {
-	in, err := os.Open(src)
+	in, err := os.Open(src) // #nosec G304 -- src is the extracted temp binary
 	if err != nil {
 		return err
 	}
@@ -282,16 +284,16 @@ func installBinary(src, dest string) error {
 	tmpName := tmp.Name()
 	if _, err := ioCopy(tmp, in); err != nil {
 		_ = fileClose(tmp)
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName) // #nosec G104 -- best-effort cleanup
 		return err
 	}
 	if err := fileChmod(tmp, 0o755); err != nil {
 		_ = fileClose(tmp)
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName) // #nosec G104 -- best-effort cleanup
 		return err
 	}
 	if err := fileClose(tmp); err != nil {
-		os.Remove(tmpName)
+		_ = os.Remove(tmpName) // #nosec G104 -- best-effort cleanup
 		return err
 	}
 	return os.Rename(tmpName, dest)

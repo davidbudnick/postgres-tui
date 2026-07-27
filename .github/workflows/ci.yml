@@ -47,6 +47,20 @@ jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: demo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d demo"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -59,6 +73,9 @@ jobs:
 
       - name: Download dependencies
         run: go mod download
+
+      - name: Seed demo database
+        run: go run ./examples/seed -host localhost -port 5432 -user postgres -password postgres -database demo
 
       - name: Run tests
         run: |
