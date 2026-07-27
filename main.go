@@ -94,10 +94,6 @@ func setup() (ui.Model, error) {
 	if err != nil {
 		return m, fmt.Errorf("failed to initialize config: %w", err)
 	}
-	// First-run / empty config: seed Local Demo + Analytics (RO) for docker-compose.
-	if err := config.EnsureDemoConnections(); err != nil {
-		return m, fmt.Errorf("failed to seed demo connections: %w", err)
-	}
 
 	pgClient := pg.NewClient()
 	container := &service.Container{Config: config, PG: pgClient}

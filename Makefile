@@ -63,9 +63,12 @@ fmt:
 run: build
 	./bin/$(APP_NAME)
 
-# Full local demo: docker postgres + seed data + TUI
+# Full local demo: docker postgres + seed data + TUI with isolated demo config
 demo-run: docker-up docker-seed build
-	./bin/$(APP_NAME)
+	@DEMO_HOME=$$(mktemp -d) && \
+		mkdir -p $$DEMO_HOME/.config/postgres-tui && \
+		cp docs/demo-config.json $$DEMO_HOME/.config/postgres-tui/config.json && \
+		HOME=$$DEMO_HOME ./bin/$(APP_NAME)
 
 start: run
 
