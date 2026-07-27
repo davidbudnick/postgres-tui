@@ -103,7 +103,7 @@ func TestStructureShowsColumnsWhenMatched(t *testing.T) {
 	}
 }
 
-func TestObjectListJKReloadsStructure(t *testing.T) {
+func TestObjectListJKDoesNotAutoOpen(t *testing.T) {
 	m := testModel(t)
 	m.Screen = types.ScreenTableDetail
 	m.Focus = focusSidebar
@@ -127,15 +127,18 @@ func TestObjectListJKReloadsStructure(t *testing.T) {
 	if m.CurrentObject == nil || m.CurrentObject.Name != "order_items" {
 		t.Fatalf("CurrentObject=%v", m.CurrentObject)
 	}
-	if cmd == nil {
-		t.Fatal("expected LoadTableDetail cmd after j/k on Structure")
+	if cmd != nil {
+		t.Fatal("cursor move must not auto-open structure")
 	}
-	if !m.Loading {
-		t.Fatal("expected loading while reloading structure")
+	if m.Screen != types.ScreenBrowser || m.Focus != focusSidebar {
+		t.Fatalf("screen=%v focus=%v", m.Screen, m.Focus)
+	}
+	if m.Loading {
+		t.Fatal("must not load on cursor move")
 	}
 }
 
-func TestSidebarJKSequenceLoadsObjectDetail(t *testing.T) {
+func TestSidebarJKDoesNotAutoOpenSequence(t *testing.T) {
 	m := testModel(t)
 	m.Screen = types.ScreenTableDetail
 	m.Focus = focusSidebar
@@ -156,14 +159,14 @@ func TestSidebarJKSequenceLoadsObjectDetail(t *testing.T) {
 	if m.CurrentObject == nil || m.CurrentObject.Name != "users_id_seq" {
 		t.Fatalf("CurrentObject=%v", m.CurrentObject)
 	}
-	if cmd == nil {
-		t.Fatal("expected LoadObjectDetail for sequences")
+	if cmd != nil {
+		t.Fatal("cursor move must not auto-open sequence detail")
 	}
 	if m.Err != nil {
 		t.Fatalf("stale error should clear: %v", m.Err)
 	}
-	if m.Loading {
-		// loading object detail is OK
+	if m.Screen != types.ScreenBrowser || m.Focus != focusSidebar {
+		t.Fatalf("screen=%v focus=%v", m.Screen, m.Focus)
 	}
 }
 

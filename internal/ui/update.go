@@ -1389,22 +1389,11 @@ func (m Model) afterObjectCursorMove() (tea.Model, tea.Cmd) {
 	m.Err = nil // drop stale "relation not found" when moving off a bad row
 	m = m.setCurrentObject(o)
 
-	// Browser/preview: only update CurrentObject — never auto-open.
-	if m.Screen == types.ScreenBrowser || m.Screen == types.ScreenQuery ||
-		m.Screen == types.ScreenActivity || m.Screen == types.ScreenERD ||
-		m.Screen == types.ScreenServerInfo {
-		return m, nil
-	}
-
-	// Structure / data screens: reload for relations; kind detail for others.
+	// Cursor movement only updates selection — enter / l opens content.
+	// Leave data/structure so the pane does not show stale rows for another object.
 	switch m.Screen {
-	case types.ScreenTableDetail:
-		return m.beginTableDetail(o)
-	case types.ScreenTableData:
-		if !isRelationObject(o) {
-			return m.beginObjectDetail(o)
-		}
-		return m.beginTableData(o, 0, m.PageSize)
+	case types.ScreenTableData, types.ScreenTableDetail:
+		return m.showObjectPreview(o), nil
 	default:
 		return m, nil
 	}
