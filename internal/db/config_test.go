@@ -61,6 +61,32 @@ func TestConfig_EmptyOnFirstRun(t *testing.T) {
 	}
 }
 
+func TestConfig_ListConnectionsSortsByID(t *testing.T) {
+	cfg := newTestConfig(t)
+	// Insert out of visual order; IDs are sequential so list should sort ascending.
+	a, err := cfg.AddConnection(types.Connection{Name: "second", Host: "b", Port: 5432})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := cfg.AddConnection(types.Connection{Name: "first", Host: "a", Port: 5432})
+	if err != nil {
+		t.Fatal(err)
+	}
+	list, err := cfg.ListConnections()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("len=%d", len(list))
+	}
+	if list[0].ID != a.ID || list[1].ID != b.ID {
+		t.Fatalf("want ids %d<%d got %d,%d", a.ID, b.ID, list[0].ID, list[1].ID)
+	}
+	if list[0].ID > list[1].ID {
+		t.Fatal("list not sorted by id")
+	}
+}
+
 func TestConfig_Persistence_PasswordStripping(t *testing.T) {
 	cfg := newTestConfig(t)
 	_, err := cfg.AddConnection(types.Connection{
